@@ -1,111 +1,158 @@
 # MemRL - Memory-Augmented Reinforcement Learning for Claude Code
 
-MemRL is a memory system that helps Claude Code learn from past coding sessions. It captures experiences, indexes them semantically, and uses reinforcement learning to surface the most valuable memories when relevant.
+MemRL gives Claude Code a persistent memory that learns from experience. Instead of starting fresh each session, Claude can recall past solutions, learn what works, and get smarter over time.
 
-## Features
+## Why MemRL?
 
-- **Session Capture**: Automatically extract and store coding experiences
-- **Semantic Search**: Find relevant past experiences using vector embeddings (BGE-Small-EN)
-- **Utility Learning**: Episodes gain/lose value based on feedback and usage patterns
-- **MCP Integration**: Direct integration with Claude Code via Model Context Protocol
+**The Problem**: Claude Code forgets everything between sessions. You solve the same problems repeatedly, and Claude can't learn from past successes or failures.
+
+**The Solution**: MemRL captures coding sessions as "episodes", indexes them for semantic search, and uses reinforcement learning to surface the most valuable memories when relevant.
+
+```
+Without MemRL:                    With MemRL:
+┌─────────────┐                  ┌─────────────┐
+│  Session 1  │ ──forgotten──>   │  Session 1  │ ──captured──┐
+└─────────────┘                  └─────────────┘             │
+┌─────────────┐                  ┌─────────────┐             ▼
+│  Session 2  │ ──forgotten──>   │  Session 2  │ ◄──recalls──┤
+└─────────────┘                  └─────────────┘             │
+┌─────────────┐                  ┌─────────────┐             │
+│  Session 3  │ ──forgotten──>   │  Session 3  │ ◄──recalls──┘
+└─────────────┘                  └─────────────┘
+     │                                 │
+     ▼                                 ▼
+  No learning                    Continuous improvement
+```
+
+## How It Works
+
+### The Learning Loop
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│  1. START TASK                                                 │
+│     User: "Fix the login redirect bug"                         │
+└────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────┐
+│  2. RETRIEVE MEMORIES                                          │
+│     Claude searches: "login redirect bug"                      │
+│     Finds: "Fixed similar issue by sanitizing return URLs"     │
+└────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────┐
+│  3. SOLVE FASTER                                               │
+│     Claude uses past experience to solve the problem           │
+└────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────┐
+│  4. CAPTURE SESSION                                            │
+│     Claude saves: what was done, what worked, what failed      │
+└────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────┐
+│  5. LEARN FROM FEEDBACK                                        │
+│     User: "That memory was helpful!"                           │
+│     → Episode utility increases                                │
+│     → Similar episodes get boosted (Bellman propagation)       │
+│     → Unhelpful memories fade over time                        │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### What Makes It "Learn"
+
+| Mechanism | What It Does |
+|-----------|--------------|
+| **Feedback** | Helpful episodes gain utility score |
+| **Bellman Propagation** | Value spreads to semantically similar episodes |
+| **Temporal Credit** | Episodes before successes get credit |
+| **Decay** | Unused memories fade (1% per day) |
+| **Retrieval Ranking** | High-utility episodes surface first |
+
+Over time, frequently helpful knowledge rises to the top, while stale or unhelpful memories fade away.
 
 ## Installation
 
-### Build from source
-
 ```bash
+# Clone and build
 git clone https://github.com/yourusername/MemRL.git
 cd MemRL
 cargo build --release
+
+# Two binaries are created:
+# - target/release/memrl      (CLI tool)
+# - target/release/memrl-mcp  (MCP server for Claude Code)
 ```
 
-This produces two binaries:
-- `target/release/memrl` - CLI tool
-- `target/release/memrl-mcp` - MCP server for Claude Code
+## Setup with Claude Code
 
-## Quick Start
-
-### 1. Initialize MemRL
-
-```bash
-./target/release/memrl init
-```
-
-### 2. Capture a session
-
-```bash
-./target/release/memrl capture --prompt "Fixed authentication bug in login flow"
-```
-
-### 3. Index for semantic search
-
-```bash
-./target/release/memrl index
-```
-
-### 4. Retrieve relevant memories
-
-```bash
-./target/release/memrl retrieve "authentication issues"
-```
-
-## Claude Code Integration
-
-### Configure MCP Server
-
-**Option 1: Using Claude Code CLI (Recommended)**
+### 1. Add the MCP Server
 
 ```bash
 claude mcp add memrl --scope user -- /path/to/MemRL/target/release/memrl-mcp
 ```
 
-The `--scope user` flag makes it available across all projects.
+The `--scope user` flag makes it available across all your projects.
 
-**Option 2: Edit `~/.claude.json` directly**
+### 2. Restart Claude Code
 
-Add to your `~/.claude.json`:
+Exit and restart Claude Code to load the new MCP server.
 
-```json
-{
-  "mcpServers": {
-    "memrl": {
-      "command": "/path/to/MemRL/target/release/memrl-mcp",
-      "args": []
-    }
-  }
-}
-```
+### 3. Verify
 
-Replace `/path/to/MemRL` with your actual installation path.
+Run `/mcp` in Claude Code. You should see `memrl` with 5 tools.
 
-### Verify Configuration
+## MCP Tools
 
-After restarting Claude Code, check that the server is loaded:
-
-```
-/mcp
-```
-
-You should see `memrl` listed with its tools.
-
-### Available MCP Tools
-
-Once configured, Claude Code has access to these tools:
+Once connected, Claude has access to these tools:
 
 | Tool | Description |
 |------|-------------|
-| `memrl_retrieve` | Search past experiences by semantic similarity |
+| `memrl_retrieve` | Search memories, list all episodes, or show episode details |
 | `memrl_capture` | Save the current session as an episode |
 | `memrl_feedback` | Mark episodes as helpful or not helpful |
-| `memrl_stats` | View memory statistics and health |
+| `memrl_stats` | View memory statistics |
+| `memrl_propagate` | Run utility propagation (spread value to similar episodes) |
 
-### Usage Examples
+### memrl_retrieve Modes
 
-Ask Claude to:
-- "Search my past sessions for authentication bugs"
-- "What did I learn about React hooks?"
-- "Save this session - we fixed the database connection issue"
-- "Mark the last retrieved memory as helpful"
+The retrieve tool has three modes:
+
+```
+Search:       memrl_retrieve(query: "authentication bug")
+List all:     memrl_retrieve(all: true)
+Show details: memrl_retrieve(query: "abc12345")  # episode ID
+```
+
+## Example Conversation
+
+```
+User: Fix the login redirect vulnerability
+
+Claude: Let me check if we've solved similar problems before...
+        [Calls memrl_retrieve("login redirect vulnerability")]
+
+        Found 2 relevant past experiences:
+        1. "Fixed open redirect by validating return URLs against whitelist"
+           - 78% similarity, 85% utility
+        2. "Auth redirect issue - added URL sanitization"
+           - 65% similarity, 72% utility
+
+        Based on past experience, I'll implement URL validation...
+        [Works on the fix]
+
+        Done! Let me save this session.
+        [Calls memrl_capture(summary: "Fixed login redirect...", outcome: "success")]
+
+User: That retrieved memory was really helpful!
+
+Claude: [Calls memrl_feedback(helpful: true, episodes: ["abc123"])]
+        Marked as helpful - this will improve future retrievals!
+```
 
 ## CLI Commands
 
@@ -113,149 +160,97 @@ Ask Claude to:
 # Initialize MemRL
 memrl init
 
-# Capture an episode
-memrl capture --prompt "Description of what happened"
-memrl capture --session ./path/to/session.json --extract-intent
+# Capture an episode manually
+memrl capture --prompt "Fixed the authentication bug"
 
 # Index episodes for semantic search
 memrl index
 
-# Retrieve similar episodes
-memrl retrieve "search query" --limit 5
+# Search memories
+memrl retrieve "database connection issues"
 
 # Provide feedback
-memrl feedback helpful --episodes ep_123,ep_456
-memrl feedback not-helpful --last
+memrl feedback helpful --episodes abc123,def456
 
-# Run utility propagation (updates episode values)
-memrl propagate
-memrl propagate --temporal --project myproject
+# Run utility propagation
+memrl propagate --temporal
 
-# Prune low-value episodes
-memrl prune --older-than 90 --min-utility 0.3
-memrl prune --execute  # Actually delete (default is dry-run)
+# Prune old/low-value episodes
+memrl prune --older-than 90 --min-utility 0.2 --execute
 
 # View statistics
 memrl stats
 ```
 
-## Configuration
+## Data Storage
 
-MemRL stores its data in `~/.memrl/`:
+MemRL stores everything locally in `~/.memrl/`:
 
 ```
 ~/.memrl/
-├── config.toml              # Configuration file
-├── feedback.log             # Feedback history
-├── episodes/                # Episode storage
-│   └── YYYY-MM-DD/         # Date-organized
-│       └── session-*.json  # Episode files
+├── config.toml              # Configuration
+├── episodes/                # Episode JSON files
+│   └── 2026-01-25/
+│       └── session-abc123.json
 └── vectors/                 # Vector database
-    └── episodes.lance/     # LanceDB storage
+    └── episodes.lance/      # LanceDB embeddings
 ```
 
-### Environment Variables
+## The RL Behind the Scenes
+
+MemRL uses reinforcement learning concepts:
+
+| Parameter | Default | Purpose |
+|-----------|---------|---------|
+| `decay_rate` | 0.01 | 1% utility decay per day |
+| `discount_factor` | 0.9 | RL gamma for Bellman updates |
+| `learning_rate` | 0.1 | Conservative alpha for updates |
+| `propagation_threshold` | 0.5 | Min similarity for propagation |
+
+**Episode Lifecycle**:
+```
+Captured → Indexed → Retrieved → Feedback → Utility Updated → Propagated
+                                                    ↓
+                                            [Low utility + old]
+                                                    ↓
+                                                 Pruned
+```
+
+## Maintenance
+
+Run periodically to keep memory healthy:
+
+```bash
+# Weekly: Propagate utility values
+memrl propagate --temporal
+
+# Monthly: Clean up old/useless episodes
+memrl prune --older-than 90 --min-utility 0.2 --execute
+
+# As needed: Check health
+memrl stats
+```
+
+## Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `ANTHROPIC_API_KEY` | Required for LLM-based intent extraction (`--extract-intent`) |
+| `ANTHROPIC_API_KEY` | For LLM-based intent extraction (`--extract-intent`) |
 | `MEMRL_DATA_DIR` | Override default data directory |
-
-## How It Works
-
-### 1. Episode Capture
-Sessions are parsed and stored as episodes with:
-- Intent/goal description
-- Context (project, files, errors)
-- Outcome (success/failure)
-- Tags for categorization
-
-### 2. Semantic Indexing
-Episodes are embedded using BGE-Small-EN-v1.5 (384 dimensions) and stored in LanceDB for fast similarity search.
-
-### 3. Utility Learning
-Episodes have a utility score (0.0-1.0) that evolves:
-- **Feedback**: Direct user feedback adjusts utility
-- **Decay**: Unused episodes slowly lose value
-- **Bellman Propagation**: Value spreads to semantically similar episodes
-- **Temporal Credit**: Episodes before successful outcomes gain credit
-
-### 4. Retrieval
-When you search, MemRL:
-1. Embeds your query
-2. Finds similar episodes via vector search
-3. Ranks by similarity × utility score
-4. Returns the most relevant experiences
-
-## Development
-
-### Run tests
-
-```bash
-cargo test
-```
-
-### Build debug version
-
-```bash
-cargo build
-```
-
-### Project Structure
-
-```
-src/
-├── main.rs         # CLI entry point
-├── mcp_server.rs   # MCP server binary
-├── episode.rs      # Episode data model
-├── store.rs        # Storage layer
-├── indexer.rs      # Vector indexing with LanceDB
-├── retrieve.rs     # Retrieval with semantic search
-├── capture.rs      # Session parsing
-├── feedback.rs     # Feedback handling
-├── utility.rs      # Utility learning algorithms
-├── llm.rs          # Anthropic API integration
-├── stats.rs        # Statistics and metrics
-└── config.rs       # Configuration management
-```
-
-## Utility Learning Details
-
-MemRL uses reinforcement learning concepts to manage episode value:
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `decay_rate` | 0.01 | 1% utility decay per day for unused episodes |
-| `discount_factor` | 0.9 | Standard RL gamma for Bellman propagation |
-| `learning_rate` | 0.1 | Conservative alpha for utility updates |
-| `propagation_threshold` | 0.5 | Minimum 50% similarity for value spread |
-
-### Propagation Commands
-
-```bash
-# Basic Bellman propagation
-memrl propagate
-
-# Include temporal credit assignment
-memrl propagate --temporal
-
-# Filter by project
-memrl propagate --project myproject --temporal
-```
 
 ## Troubleshooting
 
 ### MCP server not loading
-1. Check the binary path is correct: `ls /path/to/memrl-mcp`
-2. Verify configuration: `cat ~/.claude.json`
+1. Check path: `ls /path/to/memrl-mcp`
+2. Check config: `cat ~/.claude.json`
 3. Restart Claude Code completely
-4. Run `/mcp` to see loaded servers
+4. Run `/mcp` to verify
 
 ### Embeddings slow on first run
-The BGE-Small model (~90MB) downloads on first use. Subsequent runs use the cached model.
+The BGE-Small model (~90MB) downloads on first use. Cached after that.
 
-### Vector search not working
-Run `memrl index` to create/update the vector database after adding new episodes.
+### Vector search not finding anything
+Run `memrl index` to create/update the vector database.
 
 ## License
 
