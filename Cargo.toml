@@ -1,0 +1,72 @@
+[package]
+name = "memrl"
+version = "0.1.0"
+edition = "2024"
+description = "MemRL-inspired memory system for Claude Code"
+authors = ["Andrey"]
+license = "MIT"
+repository = "https://github.com/your-repo/memrl"
+default-run = "memrl"
+
+[dependencies]
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+
+# Async runtime
+tokio = { version = "1.43", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+
+# Vector database (Phase 2)
+lancedb = "0.23"
+lance-arrow = "1.0"
+
+# Embeddings (Phase 2)
+fastembed = "4"
+
+# Arrow for LanceDB records (must match LanceDB's internal version)
+arrow-array = "56"
+arrow-schema = "56"
+
+# Async utilities
+futures = "0.3"
+
+# Utilities
+anyhow = "1.0"
+thiserror = "2.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.11", features = ["v4", "serde"] }
+dirs = "5.0"
+regex = "1.11"
+glob = "0.3"
+colored = "2.1"
+tabled = "0.17"
+
+# Git operations
+git2 = "0.19"
+
+# HTTP client (for LLM API calls)
+reqwest = { version = "0.12", features = ["json"] }
+
+[dev-dependencies]
+tempfile = "3.14"
+tokio-test = "0.4"
+
+[[bin]]
+name = "memrl"
+path = "src/main.rs"
+
+[[bin]]
+name = "memrl-mcp"
+path = "src/mcp_server.rs"
+
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1

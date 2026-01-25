@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "memrl": {
+      "command": "memrl-mcp",
+      "args": [],
+      "env": {}
+    }
+  }
+}

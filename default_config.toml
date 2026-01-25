@@ -1,0 +1,42 @@
+# MemRL Configuration
+# Default settings for the memory system
+
+[capture]
+# Auto-capture sessions
+auto_capture = true
+# Use LLM for intent extraction
+extract_intent_llm = true
+# Capture git diffs with episodes
+capture_diffs = true
+
+[embedding]
+# Embedding model (Phase 2)
+model = "bge-small-en-v1.5"
+# Batch size for embedding generation
+batch_size = 32
+
+[retrieval]
+# Default number of episodes to retrieve
+default_limit = 3
+# Weight for semantic similarity (1 - utility_weight)
+similarity_weight = 0.3
+# Weight for utility score
+utility_weight = 0.7
+# Minimum similarity threshold
+min_similarity = 0.5
+
+[bellman]
+# Discount factor for Bellman updates
+gamma = 0.9
+# Learning rate for utility updates
+alpha = 0.1
+# How often to run propagation
+propagate_interval = "daily"
+
+[storage]
+# Maximum age for episodes (days)
+max_age_days = 180
+# Minimum utility score to keep
+min_utility_threshold = 0.05
+# Minimum retrievals to consider for pruning
+min_retrievals = 2
