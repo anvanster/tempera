@@ -198,7 +198,7 @@ impl EpisodeIndexer {
         Ok(batch)
     }
 
-    /// Index a single episode
+    /// Index a single episode (upsert - removes existing entry first to avoid duplicates)
     pub async fn index_episode(&mut self, episode: &Episode) -> Result<()> {
         let batch = self.create_record_batch(episode)?;
         let schema = Self::create_schema();
@@ -214,6 +214,14 @@ impl EpisodeIndexer {
                 .context("Failed to create episodes table")?;
             self.table = Some(table);
         } else {
+            // Delete existing entry first to avoid duplicates (upsert behavior)
+            let _ = self
+                .table
+                .as_ref()
+                .unwrap()
+                .delete(&format!("id = '{}'", episode.id))
+                .await;
+
             let batches = RecordBatchIterator::new(vec![batch].into_iter().map(Ok), schema);
             self.table
                 .as_ref()
