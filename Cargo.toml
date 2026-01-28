@@ -59,8 +59,9 @@ git2 = "0.19"
 reqwest = { version = "0.12", features = ["json"] }
 
 [build-dependencies]
-# Auto-download protoc for platforms without it installed
-protoc-prebuilt = "0.3"
+# Build protoc from source for platforms without it installed
+# This provides protoc to the entire dependency graph (including lance-encoding)
+protobuf-src = "2.1"
 
 [dev-dependencies]
 tempfile = "3.14"
