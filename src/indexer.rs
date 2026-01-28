@@ -39,10 +39,15 @@ impl EpisodeIndexer {
             .await
             .context("Failed to connect to LanceDB")?;
 
-        // Initialize the embedding model
+        // Initialize the embedding model with global cache directory
+        let cache_dir = Self::model_cache_path()?;
+        std::fs::create_dir_all(&cache_dir)?;
+
         println!("🔄 Loading embedding model (this may download the model on first run)...");
         let embedder = TextEmbedding::try_new(
-            InitOptions::new(EmbeddingModel::BGESmallENV15).with_show_download_progress(true),
+            InitOptions::new(EmbeddingModel::BGESmallENV15)
+                .with_cache_dir(cache_dir)
+                .with_show_download_progress(true),
         )
         .context("Failed to initialize embedding model")?;
         println!("✅ Embedding model loaded");
@@ -64,6 +69,12 @@ impl EpisodeIndexer {
     fn db_path() -> Result<PathBuf> {
         let data_dir = Config::data_dir()?;
         Ok(data_dir.join("vectors").join("episodes.lance"))
+    }
+
+    /// Get the global model cache path (~/.memrl/models/)
+    fn model_cache_path() -> Result<PathBuf> {
+        let data_dir = Config::data_dir()?;
+        Ok(data_dir.join("models"))
     }
 
     /// Create the episodes table schema
