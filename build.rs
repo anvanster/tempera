@@ -1,15 +1,12 @@
 //! Build script for MemRL
 //!
-//! Builds protoc from source if not installed.
-//! This is required by LanceDB dependencies (lance-encoding).
-//!
-//! Using protobuf-src ensures protoc is available to the entire
-//! dependency graph, not just this crate.
+//! LanceDB dependencies (lance-encoding) require protoc.
+//! Set the PROTOC environment variable to point to your protoc binary.
 
 fn main() {
-    // protobuf-src builds protoc and provides its path
-    // SAFETY: Single-threaded build script, no concurrent env access
-    unsafe {
-        std::env::set_var("PROTOC", protobuf_src::protoc());
+    // Verify PROTOC is set (required by lance-encoding via prost-build)
+    if std::env::var("PROTOC").is_err() {
+        println!("cargo:warning=PROTOC environment variable not set.");
+        println!("cargo:warning=Please install protoc and set PROTOC=/path/to/protoc");
     }
 }
