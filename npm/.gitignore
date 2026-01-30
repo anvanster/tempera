@@ -1,0 +1,4 @@
+node_modules/
+tmp/
+# Downloaded binaries (placed here during npm install)
+binaries/

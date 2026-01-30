@@ -1,0 +1,43 @@
+{
+  "name": "@anvanster/memrl",
+  "version": "0.1.2",
+  "description": "Memory-augmented reinforcement learning for Claude Code - persistent memory that learns from experience",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anvanster/memrl.git"
+  },
+  "homepage": "https://github.com/anvanster/memrl",
+  "author": "Andrey Vasilevsky",
+  "keywords": [
+    "claude",
+    "mcp",
+    "memory",
+    "ai",
+    "reinforcement-learning",
+    "claude-code"
+  ],
+  "bin": {
+    "memrl": "bin/memrl",
+    "memrl-mcp": "bin/memrl-mcp"
+  },
+  "scripts": {
+    "postinstall": "node scripts/install.js"
+  },
+  "files": [
+    "bin",
+    "scripts"
+  ],
+  "engines": {
+    "node": ">=14"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
+}
