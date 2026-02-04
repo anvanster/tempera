@@ -54,19 +54,19 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           cd target/${{ matrix.target }}/release
-          tar -czvf ../../../memrl-${{ matrix.target }}.tar.gz memrl memrl-mcp
+          tar -czvf ../../../tempera-${{ matrix.target }}.tar.gz tempera tempera-mcp
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
         run: |
           cd target/${{ matrix.target }}/release
-          Compress-Archive -Path memrl.exe,memrl-mcp.exe -DestinationPath ../../../memrl-${{ matrix.target }}.zip
+          Compress-Archive -Path tempera.exe,tempera-mcp.exe -DestinationPath ../../../tempera-${{ matrix.target }}.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: memrl-${{ matrix.target }}
-          path: memrl-${{ matrix.target }}.*
+          name: tempera-${{ matrix.target }}
+          path: tempera-${{ matrix.target }}.*
 
   release:
     name: Create Release

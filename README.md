@@ -1,15 +1,15 @@
-# MemRL - Memory-Augmented Reinforcement Learning for Claude Code
+# Tempera - Persistent Memory for Claude Code
 
-MemRL gives Claude Code a persistent memory that learns from experience. Instead of starting fresh each session, Claude can recall past solutions, learn what works, and get smarter over time.
+Tempera gives Claude Code a persistent memory that learns from experience. Instead of starting fresh each session, Claude can recall past solutions, learn what works, and get smarter over time.
 
-## Why MemRL?
+## Why Tempera?
 
 **The Problem**: Claude Code forgets everything between sessions. You solve the same problems repeatedly, and Claude can't learn from past successes or failures.
 
-**The Solution**: MemRL captures coding sessions as "episodes", indexes them for semantic search, and uses reinforcement learning to surface the most valuable memories when relevant.
+**The Solution**: Tempera captures coding sessions as "episodes", indexes them for semantic search, and uses reinforcement learning to surface the most valuable memories when relevant.
 
 ```
-Without MemRL:                    With MemRL:
+Without Tempera:                    With Tempera:
 ┌─────────────┐                  ┌─────────────┐
 │  Session 1  │ ──forgotten──>   │  Session 1  │ ──captured──┐
 └─────────────┘                  └─────────────┘             │
@@ -81,42 +81,42 @@ Over time, frequently helpful knowledge rises to the top, while stale or unhelpf
 
 ```bash
 # Clone and build
-git clone https://github.com/anvanster/memrl.git
-cd memrl
+git clone https://github.com/anvanster/tempera.git
+cd tempera
 cargo build --release
 
 # Two binaries are created:
-# - target/release/memrl      (CLI tool)
-# - target/release/memrl-mcp  (MCP server for Claude Code)
+# - target/release/tempera      (CLI tool)
+# - target/release/tempera-mcp  (MCP server for Claude Code)
 ```
 
 ### Install from crates.io
 
 ```bash
-cargo install memrl
+cargo install tempera
 ```
 
 ### First Run - Model Download
 
-On first use, MemRL downloads the BGE-Small embedding model (~128MB) for semantic search. This happens automatically and only once:
+On first use, Tempera downloads the BGE-Small embedding model (~128MB) for semantic search. This happens automatically and only once:
 
 ```bash
 # Initialize and trigger model download
-memrl init
+tempera init
 
 # Output:
 # 🔄 Loading embedding model (this may download the model on first run)...
 # ✅ Embedding model loaded
 ```
 
-The model is cached globally at `~/.memrl/models/` and shared across all projects.
+The model is cached globally at `~/.tempera/models/` and shared across all projects.
 
 ## Setup with Claude Code
 
 ### 1. Add the MCP Server
 
 ```bash
-claude mcp add memrl --scope user -- /path/to/MemRL/target/release/memrl-mcp
+claude mcp add tempera --scope user -- /path/to/Tempera/target/release/tempera-mcp
 ```
 
 The `--scope user` flag makes it available across all your projects.
@@ -127,7 +127,7 @@ Exit and restart Claude Code to load the new MCP server.
 
 ### 3. Verify
 
-Run `/mcp` in Claude Code. You should see `memrl` with 7 tools.
+Run `/mcp` in Claude Code. You should see `tempera` with 7 tools.
 
 ## MCP Tools
 
@@ -135,28 +135,28 @@ Once connected, Claude has access to these tools:
 
 | Tool | Description | When to Use |
 |------|-------------|-------------|
-| `memrl_retrieve` | Search memories by query, list all, or show details | **Start of session** - always check first |
-| `memrl_capture` | Save session as episode (auto-propagates utility) | **End of task** - capture successes proactively |
-| `memrl_feedback` | Mark episodes as helpful/not helpful | After using retrieved memories |
-| `memrl_status` | Check memory health for current project | Understand memory state |
-| `memrl_stats` | View overall memory statistics | Analytics and monitoring |
-| `memrl_propagate` | Spread value to similar episodes | Periodic maintenance |
-| `memrl_review` | Consolidate and cleanup memories | After related task series |
+| `tempera_retrieve` | Search memories by query, list all, or show details | **Start of session** - always check first |
+| `tempera_capture` | Save session as episode (auto-propagates utility) | **End of task** - capture successes proactively |
+| `tempera_feedback` | Mark episodes as helpful/not helpful | After using retrieved memories |
+| `tempera_status` | Check memory health for current project | Understand memory state |
+| `tempera_stats` | View overall memory statistics | Analytics and monitoring |
+| `tempera_propagate` | Spread value to similar episodes | Periodic maintenance |
+| `tempera_review` | Consolidate and cleanup memories | After related task series |
 
 ### Key Lifecycle Behaviors
 
-**Start of session**: Claude should automatically check for relevant memories using `memrl_retrieve` before starting non-trivial tasks.
+**Start of session**: Claude should automatically check for relevant memories using `tempera_retrieve` before starting non-trivial tasks.
 
-**End of task**: Claude should proactively capture successful sessions using `memrl_capture` - don't wait to be asked. The capture tool automatically runs utility propagation.
+**End of task**: Claude should proactively capture successful sessions using `tempera_capture` - don't wait to be asked. The capture tool automatically runs utility propagation.
 
-**Cross-project insights**: Use `memrl_capture(project: "other-project")` to tag memories for a different project.
+**Cross-project insights**: Use `tempera_capture(project: "other-project")` to tag memories for a different project.
 
-### memrl_retrieve Modes
+### tempera_retrieve Modes
 
 ```
-Search:       memrl_retrieve(query: "authentication bug")
-List all:     memrl_retrieve(all: true)
-Show details: memrl_retrieve(query: "abc12345")  # episode ID
+Search:       tempera_retrieve(query: "authentication bug")
+List all:     tempera_retrieve(all: true)
+Show details: tempera_retrieve(query: "abc12345")  # episode ID
 ```
 
 ## Example Conversation
@@ -165,7 +165,7 @@ Show details: memrl_retrieve(query: "abc12345")  # episode ID
 User: Fix the login redirect vulnerability
 
 Claude: Let me check if we've solved similar problems before...
-        [Calls memrl_retrieve("login redirect vulnerability")]
+        [Calls tempera_retrieve("login redirect vulnerability")]
 
         Found 2 relevant past experiences:
         1. "Fixed open redirect by validating return URLs against whitelist"
@@ -177,48 +177,48 @@ Claude: Let me check if we've solved similar problems before...
         [Works on the fix]
 
         Done! Let me save this session.
-        [Calls memrl_capture(summary: "Fixed login redirect...", outcome: "success")]
+        [Calls tempera_capture(summary: "Fixed login redirect...", outcome: "success")]
 
 User: That retrieved memory was really helpful!
 
-Claude: [Calls memrl_feedback(helpful: true, episodes: ["abc123"])]
+Claude: [Calls tempera_feedback(helpful: true, episodes: ["abc123"])]
         Marked as helpful - this will improve future retrievals!
 ```
 
 ## CLI Commands
 
 ```bash
-# Initialize MemRL
-memrl init
+# Initialize Tempera
+tempera init
 
 # Capture an episode manually
-memrl capture --prompt "Fixed the authentication bug"
+tempera capture --prompt "Fixed the authentication bug"
 
 # Index episodes for semantic search
-memrl index
+tempera index
 
 # Search memories
-memrl retrieve "database connection issues"
+tempera retrieve "database connection issues"
 
 # Provide feedback
-memrl feedback helpful --episodes abc123,def456
+tempera feedback helpful --episodes abc123,def456
 
 # Run utility propagation
-memrl propagate --temporal
+tempera propagate --temporal
 
 # Prune old/low-value episodes
-memrl prune --older-than 90 --min-utility 0.2 --execute
+tempera prune --older-than 90 --min-utility 0.2 --execute
 
 # View statistics
-memrl stats
+tempera stats
 ```
 
 ## Data Storage
 
-MemRL stores everything locally in `~/.memrl/` (shared across all projects):
+Tempera stores everything locally in `~/.tempera/` (shared across all projects):
 
 ```
-~/.memrl/
+~/.tempera/
 ├── config.toml              # Configuration
 ├── episodes/                # Episode JSON files
 │   └── 2026-01-25/
@@ -233,7 +233,7 @@ All projects share the same memory database, enabling cross-project learning.
 
 ## The RL Behind the Scenes
 
-MemRL uses reinforcement learning concepts:
+Tempera uses reinforcement learning concepts:
 
 | Parameter | Default | Purpose |
 |-----------|---------|---------|
@@ -257,13 +257,13 @@ Run periodically to keep memory healthy:
 
 ```bash
 # Weekly: Propagate utility values
-memrl propagate --temporal
+tempera propagate --temporal
 
 # Monthly: Clean up old/useless episodes
-memrl prune --older-than 90 --min-utility 0.2 --execute
+tempera prune --older-than 90 --min-utility 0.2 --execute
 
 # As needed: Check health
-memrl stats
+tempera stats
 ```
 
 ## Environment Variables
@@ -271,21 +271,21 @@ memrl stats
 | Variable | Description |
 |----------|-------------|
 | `ANTHROPIC_API_KEY` | For LLM-based intent extraction (`--extract-intent`) |
-| `MEMRL_DATA_DIR` | Override default data directory |
+| `TEMPERA_DATA_DIR` | Override default data directory |
 
 ## Troubleshooting
 
 ### MCP server not loading
-1. Check path: `ls /path/to/memrl-mcp`
+1. Check path: `ls /path/to/tempera-mcp`
 2. Check config: `cat ~/.claude.json`
 3. Restart Claude Code completely
 4. Run `/mcp` to verify
 
 ### Embeddings slow on first run
-The BGE-Small model (~128MB) downloads on first use from HuggingFace. This requires internet access. After download, the model is cached at `~/.memrl/models/` and works offline.
+The BGE-Small model (~128MB) downloads on first use from HuggingFace. This requires internet access. After download, the model is cached at `~/.tempera/models/` and works offline.
 
 ### Vector search not finding anything
-Run `memrl index` to create/update the vector database.
+Run `tempera index` to create/update the vector database.
 
 ### Model download fails
 If behind a firewall or proxy, ensure access to `huggingface.co`. The model files are downloaded via HTTPS.

@@ -184,7 +184,7 @@ impl Default for Config {
 }
 
 impl Config {
-    /// Load configuration from ~/.memrl/config.toml
+    /// Load configuration from ~/.tempera/config.toml
     /// Falls back to defaults if file doesn't exist
     pub fn load() -> Result<Self> {
         let config_path = Self::config_path()?;
@@ -201,7 +201,7 @@ impl Config {
         }
     }
 
-    /// Save configuration to ~/.memrl/config.toml
+    /// Save configuration to ~/.tempera/config.toml
     pub fn save(&self) -> Result<()> {
         let config_path = Self::config_path()?;
 
@@ -220,26 +220,26 @@ impl Config {
     /// Get the path to the config file
     pub fn config_path() -> Result<PathBuf> {
         let home = dirs::home_dir().context("Could not find home directory")?;
-        Ok(home.join(".memrl").join("config.toml"))
+        Ok(home.join(".tempera").join("config.toml"))
     }
 
-    /// Get the memrl data directory (~/.memrl)
+    /// Get the tempera data directory (~/.tempera)
     pub fn data_dir() -> Result<PathBuf> {
         let home = dirs::home_dir().context("Could not find home directory")?;
-        Ok(home.join(".memrl"))
+        Ok(home.join(".tempera"))
     }
 
-    /// Get the episodes directory (~/.memrl/episodes)
+    /// Get the episodes directory (~/.tempera/episodes)
     pub fn episodes_dir() -> Result<PathBuf> {
         Ok(Self::data_dir()?.join("episodes"))
     }
 
-    /// Get the database path (~/.memrl/memrl.db)
+    /// Get the database path (~/.tempera/tempera.db)
     pub fn database_path() -> Result<PathBuf> {
-        Ok(Self::data_dir()?.join("memrl.db"))
+        Ok(Self::data_dir()?.join("tempera.db"))
     }
 
-    /// Get the feedback log path (~/.memrl/feedback.log)
+    /// Get the feedback log path (~/.tempera/feedback.log)
     pub fn feedback_log_path() -> Result<PathBuf> {
         Ok(Self::data_dir()?.join("feedback.log"))
     }

@@ -46,7 +46,7 @@ function getBinaryName() {
   }
 
   const ext = platform === 'win32' ? '.exe' : '';
-  return `memrl-mcp-${platformStr}-${archStr}${ext}`;
+  return `tempera-mcp-${platformStr}-${archStr}${ext}`;
 }
 
 // Find the binary path
@@ -57,7 +57,7 @@ function findBinary() {
 
   if (!fs.existsSync(binaryPath)) {
     console.error(`Binary not found: ${binaryPath}`);
-    console.error('Please reinstall the package: npm install -g @anvanster/memrl');
+    console.error('Please reinstall the package: npm install -g @anvanster/tempera');
     process.exit(1);
   }
 
@@ -74,7 +74,7 @@ const child = spawn(binaryPath, process.argv.slice(2), {
 });
 
 child.on('error', (err) => {
-  console.error(`Failed to start memrl-mcp: ${err.message}`);
+  console.error(`Failed to start tempera-mcp: ${err.message}`);
   process.exit(1);
 });
 

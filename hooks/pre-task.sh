@@ -1,5 +1,5 @@
 #!/bin/bash
-# MemRL Pre-Task Hook for Claude Code
+# Tempera Pre-Task Hook for Claude Code
 #
 # This hook retrieves relevant past episodes before starting a new task.
 # Install by adding to your Claude Code hooks configuration.
@@ -9,8 +9,8 @@
 
 set -e
 
-# Check if memrl is available
-if ! command -v memrl &> /dev/null; then
+# Check if tempera is available
+if ! command -v tempera &> /dev/null; then
     exit 0
 fi
 
@@ -27,8 +27,8 @@ echo "---"
 echo "Checking episodic memory for relevant past experiences..."
 echo ""
 
-memrl retrieve "$CLAUDE_USER_PROMPT" --project "$PROJECT_NAME" --limit 3 --format text 2>/dev/null || \
-memrl retrieve "$CLAUDE_USER_PROMPT" --limit 3 --format text 2>/dev/null || \
+tempera retrieve "$CLAUDE_USER_PROMPT" --project "$PROJECT_NAME" --limit 3 --format text 2>/dev/null || \
+tempera retrieve "$CLAUDE_USER_PROMPT" --limit 3 --format text 2>/dev/null || \
 echo "No relevant past episodes found."
 
 echo "---"

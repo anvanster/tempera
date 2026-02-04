@@ -91,7 +91,7 @@ pub async fn run(project: Option<String>, _config: &Config) -> Result<()> {
     let store = EpisodeStore::new()?;
     let stats = store.get_stats(project.as_deref())?;
 
-    println!("{}", "📊 MemRL Statistics".bold());
+    println!("{}", "📊 Tempera Statistics".bold());
     println!();
 
     if let Some(ref proj) = project {

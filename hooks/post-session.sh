@@ -1,5 +1,5 @@
 #!/bin/bash
-# MemRL Post-Session Hook for Claude Code
+# Tempera Post-Session Hook for Claude Code
 #
 # This hook captures the session as an episode when Claude Code completes.
 # Install by adding to your Claude Code hooks configuration.
@@ -10,9 +10,9 @@
 
 set -e
 
-# Check if memrl is available
-if ! command -v memrl &> /dev/null; then
-    echo "memrl not found in PATH, skipping capture"
+# Check if tempera is available
+if ! command -v tempera &> /dev/null; then
+    echo "tempera not found in PATH, skipping capture"
     exit 0
 fi
 
@@ -36,9 +36,9 @@ PROJECT_NAME=$(basename "$PROJECT")
 
 # Capture the session
 echo "Capturing session for project: $PROJECT_NAME"
-memrl capture --session "$CLAUDE_SESSION_FILE" --project "$PROJECT_NAME" 2>/dev/null || true
+tempera capture --session "$CLAUDE_SESSION_FILE" --project "$PROJECT_NAME" 2>/dev/null || true
 
 # Update the index
-memrl index 2>/dev/null || true
+tempera index 2>/dev/null || true
 
 echo "Session captured successfully"

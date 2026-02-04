@@ -26,7 +26,7 @@ pub async fn run(
             results
         }
         _ => {
-            println!("🔍 Using text-based search (run 'memrl index' for semantic search)...\n");
+            println!("🔍 Using text-based search (run 'tempera index' for semantic search)...\n");
             retrieve_episodes_text(query, limit, project.as_deref(), config, &store)?
         }
     };
@@ -266,7 +266,7 @@ fn print_markdown_results(episodes: &[ScoredEpisode], query: &str) {
     println!("{}", "---".dimmed());
     println!(
         "{}",
-        "To provide feedback: memrl feedback helpful --episodes <id>,<id>".dimmed()
+        "To provide feedback: tempera feedback helpful --episodes <id>,<id>".dimmed()
     );
 }
 

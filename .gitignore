@@ -20,7 +20,7 @@ Thumbs.db
 .env
 .env.local
 
-# MemRL data (user-specific)
+# Tempera data (user-specific)
 # Note: Don't commit personal episode data
 
 # Model cache (downloaded on first run)

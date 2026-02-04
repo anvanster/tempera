@@ -76,7 +76,7 @@ impl EpisodeIndexer {
         Ok(data_dir.join("vectors"))
     }
 
-    /// Get the global model cache path (~/.memrl/models/)
+    /// Get the global model cache path (~/.tempera/models/)
     fn model_cache_path() -> Result<PathBuf> {
         let data_dir = Config::data_dir()?;
         Ok(data_dir.join("models"))
