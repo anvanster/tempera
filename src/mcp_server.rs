@@ -394,10 +394,19 @@ impl McpServer {
             output.push_str(&format!("   - Project: {}\n", ep.project));
             output.push_str(&format!("   - Type: {}\n", ep.intent.task_type));
             output.push_str(&format!("   - Outcome: {}\n", ep.outcome.status));
+            // Show utility with confidence level based on retrieval count
+            let confidence = match ep.utility.retrieval_count {
+                0 => "untested",
+                1..=2 => "low confidence",
+                3..=5 => "moderate confidence",
+                _ => "high confidence",
+            };
             output.push_str(&format!(
-                "   - Relevance: {:.0}% similarity, {:.0}% utility\n",
+                "   - Relevance: {:.0}% similarity, {:.0}% utility ({}, {} retrievals)\n",
                 scored.similarity_score * 100.0,
-                scored.utility_score * 100.0
+                scored.utility_score * 100.0,
+                confidence,
+                ep.utility.retrieval_count
             ));
 
             if !ep.context.files_modified.is_empty() {
@@ -1362,9 +1371,76 @@ async fn try_vector_retrieve(
     });
 
     episodes.retain(|e| e.similarity_score >= config.retrieval.min_similarity);
-    episodes.truncate(limit);
+
+    // Apply MMR for diversity (lambda=0.7: 70% relevance, 30% diversity)
+    let episodes = apply_mmr_mcp(episodes, limit, 0.7);
 
     Ok(episodes)
+}
+
+/// Apply Maximal Marginal Relevance (MMR) for result diversity in MCP
+fn apply_mmr_mcp(
+    mut candidates: Vec<retrieve::ScoredEpisode>,
+    limit: usize,
+    lambda: f32,
+) -> Vec<retrieve::ScoredEpisode> {
+    if candidates.is_empty() || limit == 0 {
+        return vec![];
+    }
+
+    let mut selected: Vec<retrieve::ScoredEpisode> = Vec::with_capacity(limit);
+    selected.push(candidates.remove(0));
+
+    while !candidates.is_empty() && selected.len() < limit {
+        let best_idx = candidates
+            .iter()
+            .enumerate()
+            .map(|(idx, candidate)| {
+                let max_sim = selected
+                    .iter()
+                    .map(|s| text_overlap(&candidate.episode, &s.episode))
+                    .fold(0.0_f32, |a, b| a.max(b));
+                let mmr = lambda * candidate.combined_score - (1.0 - lambda) * max_sim;
+                (idx, mmr)
+            })
+            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(idx, _)| idx);
+
+        if let Some(idx) = best_idx {
+            selected.push(candidates.remove(idx));
+        } else {
+            break;
+        }
+    }
+    selected
+}
+
+/// Calculate text overlap for MMR diversity
+fn text_overlap(a: &episode::Episode, b: &episode::Episode) -> f32 {
+    let a_text = format!(
+        "{} {} {}",
+        a.intent.raw_prompt.to_lowercase(),
+        a.intent.domain.join(" ").to_lowercase(),
+        a.context.files_modified.join(" ").to_lowercase()
+    );
+    let b_text = format!(
+        "{} {} {}",
+        b.intent.raw_prompt.to_lowercase(),
+        b.intent.domain.join(" ").to_lowercase(),
+        b.context.files_modified.join(" ").to_lowercase()
+    );
+
+    let a_words: std::collections::HashSet<&str> = a_text.split_whitespace().collect();
+    let b_words: std::collections::HashSet<&str> = b_text.split_whitespace().collect();
+
+    if a_words.is_empty() || b_words.is_empty() {
+        return 0.0;
+    }
+
+    let intersection = a_words.intersection(&b_words).count();
+    let union = a_words.union(&b_words).count();
+
+    if union == 0 { 0.0 } else { intersection as f32 / union as f32 }
 }
 
 /// Record retrieval for tracking

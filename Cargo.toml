@@ -27,16 +27,11 @@ toml = "0.8"
 # Database
 sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
 
-# Vector database (Phase 2)
-lancedb = "0.23"
-lance-arrow = "1.0"
+# Vector database
+vectrust = { path = "../vectrust/crates/vectrust" }
 
-# Embeddings (Phase 2)
+# Embeddings
 fastembed = "4"
-
-# Arrow for LanceDB records (must match LanceDB's internal version)
-arrow-array = "56"
-arrow-schema = "56"
 
 # Async utilities
 futures = "0.3"

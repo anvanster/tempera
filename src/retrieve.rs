@@ -96,9 +96,11 @@ async fn try_vector_search(
             .unwrap_or(std::cmp::Ordering::Equal)
     });
 
-    // Filter by minimum similarity and take top N
+    // Filter by minimum similarity
     episodes.retain(|e| e.similarity_score >= config.retrieval.min_similarity);
-    episodes.truncate(limit);
+
+    // Apply MMR for diversity (lambda=0.7: 70% relevance, 30% diversity)
+    let episodes = apply_mmr(episodes, limit, 0.7);
 
     Ok(episodes)
 }
@@ -149,8 +151,8 @@ pub fn retrieve_episodes_text(
             .unwrap_or(std::cmp::Ordering::Equal)
     });
 
-    // Take top N
-    scored.truncate(limit);
+    // Apply MMR for diversity (lambda=0.7: 70% relevance, 30% diversity)
+    let scored = apply_mmr(scored, limit, 0.7);
 
     Ok(scored)
 }
@@ -216,10 +218,20 @@ fn print_markdown_results(episodes: &[ScoredEpisode], query: &str) {
         );
         println!("**Project**: {}", ep.project);
         println!("**Outcome**: {}", ep.outcome.status);
+
+        // Show utility with confidence level based on retrieval count
+        let confidence = match ep.utility.retrieval_count {
+            0 => "untested",
+            1..=2 => "low confidence",
+            3..=5 => "moderate confidence",
+            _ => "high confidence",
+        };
         println!(
-            "**Relevance**: {:.0}% similarity, {:.0}% utility",
+            "**Relevance**: {:.0}% similarity, {:.0}% utility ({}, {} retrievals)",
             scored.similarity_score * 100.0,
-            scored.utility_score * 100.0
+            scored.utility_score * 100.0,
+            confidence,
+            ep.utility.retrieval_count
         );
 
         // Key insight from the episode
@@ -311,6 +323,81 @@ pub struct ScoredEpisode {
     pub similarity_score: f32,
     pub utility_score: f32,
     pub combined_score: f32,
+}
+
+/// Apply Maximal Marginal Relevance (MMR) for result diversity
+/// lambda: 0.0 = pure diversity, 1.0 = pure relevance
+fn apply_mmr(mut candidates: Vec<ScoredEpisode>, limit: usize, lambda: f32) -> Vec<ScoredEpisode> {
+    if candidates.is_empty() || limit == 0 {
+        return vec![];
+    }
+
+    let mut selected: Vec<ScoredEpisode> = Vec::with_capacity(limit);
+
+    // First result is always the highest scoring
+    selected.push(candidates.remove(0));
+
+    while !candidates.is_empty() && selected.len() < limit {
+        // Find candidate with best MMR score
+        let best_idx = candidates
+            .iter()
+            .enumerate()
+            .map(|(idx, candidate)| {
+                // Max similarity to any already-selected episode
+                let max_sim_to_selected = selected
+                    .iter()
+                    .map(|s| text_overlap_similarity(&candidate.episode, &s.episode))
+                    .fold(0.0_f32, |a, b| a.max(b));
+
+                // MMR score: λ * relevance - (1-λ) * redundancy
+                let mmr_score = lambda * candidate.combined_score
+                    - (1.0 - lambda) * max_sim_to_selected;
+
+                (idx, mmr_score)
+            })
+            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(idx, _)| idx);
+
+        if let Some(idx) = best_idx {
+            selected.push(candidates.remove(idx));
+        } else {
+            break;
+        }
+    }
+
+    selected
+}
+
+/// Calculate text overlap between two episodes for MMR diversity
+fn text_overlap_similarity(a: &Episode, b: &Episode) -> f32 {
+    let a_text = format!(
+        "{} {} {}",
+        a.intent.raw_prompt.to_lowercase(),
+        a.intent.domain.join(" ").to_lowercase(),
+        a.context.files_modified.join(" ").to_lowercase()
+    );
+    let b_text = format!(
+        "{} {} {}",
+        b.intent.raw_prompt.to_lowercase(),
+        b.intent.domain.join(" ").to_lowercase(),
+        b.context.files_modified.join(" ").to_lowercase()
+    );
+
+    let a_words: std::collections::HashSet<&str> = a_text.split_whitespace().collect();
+    let b_words: std::collections::HashSet<&str> = b_text.split_whitespace().collect();
+
+    if a_words.is_empty() || b_words.is_empty() {
+        return 0.0;
+    }
+
+    let intersection = a_words.intersection(&b_words).count();
+    let union = a_words.union(&b_words).count();
+
+    if union == 0 {
+        0.0
+    } else {
+        intersection as f32 / union as f32
+    }
 }
 
 #[cfg(test)]
