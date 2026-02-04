@@ -1,5 +1,5 @@
 #!/bin/bash
-# Package memrl release for GitHub (Linux)
+# Package tempera release for GitHub (Linux)
 
 set -e
 
@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
-echo "📦 Packaging memrl v$VERSION for release..."
+echo "📦 Packaging tempera v$VERSION for release..."
 
 # Ensure release builds exist
 RELEASE_PATH="$PROJECT_ROOT/target/release"
@@ -21,16 +21,16 @@ if [ ! -d "$RELEASE_PATH" ]; then
 fi
 
 # Check for executables
-MEMRL_BIN="$RELEASE_PATH/memrl"
-MCP_BIN="$RELEASE_PATH/memrl-mcp"
+TEMPERA_BIN="$RELEASE_PATH/tempera"
+MCP_BIN="$RELEASE_PATH/tempera-mcp"
 
-if [ ! -f "$MEMRL_BIN" ]; then
-    echo "❌ memrl not found in target/release"
+if [ ! -f "$TEMPERA_BIN" ]; then
+    echo "❌ tempera not found in target/release"
     exit 1
 fi
 
 if [ ! -f "$MCP_BIN" ]; then
-    echo "❌ memrl-mcp not found in target/release"
+    echo "❌ tempera-mcp not found in target/release"
     exit 1
 fi
 
@@ -45,7 +45,7 @@ trap "rm -rf $STAGING_DIR" EXIT
 echo "📋 Copying files to staging..."
 
 # Copy executables
-cp "$MEMRL_BIN" "$STAGING_DIR/"
+cp "$TEMPERA_BIN" "$STAGING_DIR/"
 cp "$MCP_BIN" "$STAGING_DIR/"
 echo "  ✓ Copied executables"
 
@@ -68,7 +68,7 @@ esac
 PLATFORM="linux-$ARCH_NAME"
 
 # Create archive name
-ARCHIVE_NAME="memrl-v$VERSION-$PLATFORM"
+ARCHIVE_NAME="tempera-v$VERSION-$PLATFORM"
 ZIP_PATH="$OUTPUT_PATH/$ARCHIVE_NAME.zip"
 
 echo "🗜️  Creating archive: $ARCHIVE_NAME.zip"

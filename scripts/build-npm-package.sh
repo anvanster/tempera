@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Build script for @anvanster/memrl npm package
+# Build script for @anvanster/tempera npm package
 # Run from project root: ./scripts/build-npm-package.sh
 #
 # Prerequisites: Run ./scripts/prepare-binaries.sh first on each platform
@@ -11,7 +11,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 NPM_PACKAGE="$PROJECT_ROOT/npm"
 PREBUILT_DIR="$PROJECT_ROOT/prebuilt"
 
-echo "Building @anvanster/memrl npm package..."
+echo "Building @anvanster/tempera npm package..."
 
 # Optionally run prepare-binaries first to ensure we have latest builds
 # Skip with --skip-build flag
@@ -45,13 +45,13 @@ for PLAT in "${PLATFORMS[@]}"; do
     EXT=""
     [ "$PLAT" = "win32-x64" ] && EXT=".exe"
 
-    MEMRL_BIN="memrl-${PLAT}${EXT}"
-    MCP_BIN="memrl-mcp-${PLAT}${EXT}"
+    TEMPERA_BIN="tempera-${PLAT}${EXT}"
+    MCP_BIN="tempera-mcp-${PLAT}${EXT}"
 
-    if [ -f "$PREBUILT_DIR/$MEMRL_BIN" ] && [ -f "$PREBUILT_DIR/$MCP_BIN" ]; then
-        cp "$PREBUILT_DIR/$MEMRL_BIN" "$NPM_PACKAGE/bin/"
+    if [ -f "$PREBUILT_DIR/$TEMPERA_BIN" ] && [ -f "$PREBUILT_DIR/$MCP_BIN" ]; then
+        cp "$PREBUILT_DIR/$TEMPERA_BIN" "$NPM_PACKAGE/bin/"
         cp "$PREBUILT_DIR/$MCP_BIN" "$NPM_PACKAGE/bin/"
-        chmod +x "$NPM_PACKAGE/bin/$MEMRL_BIN" 2>/dev/null || true
+        chmod +x "$NPM_PACKAGE/bin/$TEMPERA_BIN" 2>/dev/null || true
         chmod +x "$NPM_PACKAGE/bin/$MCP_BIN" 2>/dev/null || true
         echo "  ✓ $PLAT"
         ((FOUND_COUNT++))
@@ -65,7 +65,7 @@ done
 echo ""
 echo "========================================"
 echo "Package contents:"
-ls -lh "$NPM_PACKAGE/bin/" 2>/dev/null | grep -E "memrl" || echo "  (no binaries)"
+ls -lh "$NPM_PACKAGE/bin/" 2>/dev/null | grep -E "tempera" || echo "  (no binaries)"
 
 echo ""
 echo "Found: $FOUND_COUNT/${#PLATFORMS[@]} platforms"
@@ -98,5 +98,5 @@ fi
 echo ""
 echo "To test locally:"
 echo "  cd npm && npm link"
-echo "  memrl --help"
-echo "  memrl-mcp --help"
+echo "  tempera --help"
+echo "  tempera-mcp --help"

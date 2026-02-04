@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# Package memrl release for GitHub
+# Package tempera release for GitHub
 
 param(
     [string]$Version = "0.1.3",
@@ -13,7 +13,7 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $ProjectRoot
 
 try {
-    Write-Host "📦 Packaging memrl v$Version for release..." -ForegroundColor Cyan
+    Write-Host "📦 Packaging tempera v$Version for release..." -ForegroundColor Cyan
     
     # Ensure release builds exist
     $ReleasePath = Join-Path $ProjectRoot "target\release"
@@ -23,16 +23,16 @@ try {
     }
     
     # Check for executables
-    $MemrlExe = Join-Path $ReleasePath "memrl.exe"
-    $McpExe = Join-Path $ReleasePath "memrl-mcp.exe"
+    $TemperaExe = Join-Path $ReleasePath "tempera.exe"
+    $McpExe = Join-Path $ReleasePath "tempera-mcp.exe"
     
-    if (-not (Test-Path $MemrlExe)) {
-        Write-Host "❌ memrl.exe not found in target\release" -ForegroundColor Red
+    if (-not (Test-Path $TemperaExe)) {
+        Write-Host "❌ tempera.exe not found in target\release" -ForegroundColor Red
         exit 1
     }
     
     if (-not (Test-Path $McpExe)) {
-        Write-Host "❌ memrl-mcp.exe not found in target\release" -ForegroundColor Red
+        Write-Host "❌ tempera-mcp.exe not found in target\release" -ForegroundColor Red
         exit 1
     }
     
@@ -43,7 +43,7 @@ try {
     }
     
     # Create temp staging directory
-    $StagingDir = Join-Path $env:TEMP "memrl-release-staging"
+    $StagingDir = Join-Path $env:TEMP "tempera-release-staging"
     if (Test-Path $StagingDir) {
         Remove-Item -Path $StagingDir -Recurse -Force
     }
@@ -52,7 +52,7 @@ try {
     Write-Host "📋 Copying files to staging..." -ForegroundColor Yellow
     
     # Copy executables
-    Copy-Item -Path $MemrlExe -Destination $StagingDir
+    Copy-Item -Path $TemperaExe -Destination $StagingDir
     Copy-Item -Path $McpExe -Destination $StagingDir
     Write-Host "  ✓ Copied executables" -ForegroundColor Green
     
@@ -78,7 +78,7 @@ try {
     }
     
     # Create archive name
-    $ArchiveName = "memrl-v$Version-$Platform"
+    $ArchiveName = "tempera-v$Version-$Platform"
     $ZipPath = Join-Path $OutputPath "$ArchiveName.zip"
     
     Write-Host "🗜️  Creating archive: $ArchiveName.zip" -ForegroundColor Yellow

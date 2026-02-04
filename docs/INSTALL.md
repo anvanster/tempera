@@ -1,6 +1,6 @@
-# MemRL Installation Guide
+# Tempera Installation Guide
 
-Complete installation instructions for MemRL on Windows, macOS, and Linux.
+Complete installation instructions for Tempera on Windows, macOS, and Linux.
 
 ## Table of Contents
 
@@ -20,8 +20,8 @@ Complete installation instructions for MemRL on Windows, macOS, and Linux.
 
 #### Step 1: Download Release Package
 
-1. Go to the [MemRL Releases page](https://github.com/anvanster/memrl/releases)
-2. Download the latest `memrl-vX.X.X-windows-x64.zip` file
+1. Go to the [Tempera Releases page](https://github.com/anvanster/tempera/releases)
+2. Download the latest `tempera-vX.X.X-windows-x64.zip` file
 3. Download the corresponding `.sha256` checksum file (optional, for verification)
 
 #### Step 2: Verify Checksum (Optional but Recommended)
@@ -33,8 +33,8 @@ Open PowerShell and run:
 cd $env:USERPROFILE\Downloads
 
 # Verify the checksum
-$hash = (Get-FileHash -Path "memrl-v0.1.3-windows-x64.zip" -Algorithm SHA256).Hash
-$expected = (Get-Content "memrl-v0.1.3-windows-x64.sha256" -Raw).Split()[0]
+$hash = (Get-FileHash -Path "tempera-v0.1.3-windows-x64.zip" -Algorithm SHA256).Hash
+$expected = (Get-Content "tempera-v0.1.3-windows-x64.sha256" -Raw).Split()[0]
 
 if ($hash -eq $expected) {
     Write-Host "✅ Checksum verified!" -ForegroundColor Green
@@ -47,10 +47,10 @@ if ($hash -eq $expected) {
 
 ```powershell
 # Extract to Program Files
-Expand-Archive -Path "memrl-v0.1.3-windows-x64.zip" -DestinationPath "$env:ProgramFiles\memrl"
+Expand-Archive -Path "tempera-v0.1.3-windows-x64.zip" -DestinationPath "$env:ProgramFiles\tempera"
 
 # Or extract to a user directory
-Expand-Archive -Path "memrl-v0.1.3-windows-x64.zip" -DestinationPath "$env:LOCALAPPDATA\memrl"
+Expand-Archive -Path "tempera-v0.1.3-windows-x64.zip" -DestinationPath "$env:LOCALAPPDATA\tempera"
 ```
 
 #### Step 4: Add to PATH
@@ -58,7 +58,7 @@ Expand-Archive -Path "memrl-v0.1.3-windows-x64.zip" -DestinationPath "$env:LOCAL
 ##### Using PowerShell (Temporary - Current Session Only):
 
 ```powershell
-$env:Path += ";$env:LOCALAPPDATA\memrl"
+$env:Path += ";$env:LOCALAPPDATA\tempera"
 ```
 
 ##### Using PowerShell (Permanent - Recommended):
@@ -66,7 +66,7 @@ $env:Path += ";$env:LOCALAPPDATA\memrl"
 ```powershell
 # Add to user PATH
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-[Environment]::SetEnvironmentVariable("Path", "$userPath;$env:LOCALAPPDATA\memrl", "User")
+[Environment]::SetEnvironmentVariable("Path", "$userPath;$env:LOCALAPPDATA\tempera", "User")
 
 # Refresh current session
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
@@ -78,7 +78,7 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 2. Click "Advanced system settings"
 3. Click "Environment Variables"
 4. Under "User variables", select "Path" and click "Edit"
-5. Click "New" and add: `C:\Users\YourUsername\AppData\Local\memrl`
+5. Click "New" and add: `C:\Users\YourUsername\AppData\Local\tempera`
 6. Click "OK" on all dialogs
 7. Restart your terminal
 
@@ -87,11 +87,11 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 Open a new PowerShell or Command Prompt window:
 
 ```powershell
-# Check memrl CLI
-memrl --version
+# Check tempera CLI
+tempera --version
 
 # Check MCP server
-memrl-mcp --version
+tempera-mcp --version
 ```
 
 You should see version information for both executables.
@@ -103,10 +103,10 @@ You should see version information for both executables.
 If you have Rust installed:
 
 ```powershell
-cargo install memrl
+cargo install tempera
 ```
 
-This compiles from source and installs both `memrl.exe` and `memrl-mcp.exe` to your Cargo bin directory (usually `C:\Users\YourUsername\.cargo\bin`).
+This compiles from source and installs both `tempera.exe` and `tempera-mcp.exe` to your Cargo bin directory (usually `C:\Users\YourUsername\.cargo\bin`).
 
 ---
 
@@ -119,39 +119,39 @@ This compiles from source and installs both `memrl.exe` and `memrl-mcp.exe` to y
 ```bash
 # Download the latest release
 cd ~/Downloads
-curl -LO https://github.com/anvanster/memrl/releases/download/v0.1.3/memrl-v0.1.3-macos-x64.zip
-curl -LO https://github.com/anvanster/memrl/releases/download/v0.1.3/memrl-v0.1.3-macos-x64.sha256
+curl -LO https://github.com/anvanster/tempera/releases/download/v0.1.3/tempera-v0.1.3-macos-x64.zip
+curl -LO https://github.com/anvanster/tempera/releases/download/v0.1.3/tempera-v0.1.3-macos-x64.sha256
 
 # Verify checksum
-shasum -a 256 -c memrl-v0.1.3-macos-x64.sha256
+shasum -a 256 -c tempera-v0.1.3-macos-x64.sha256
 
 # Extract
-unzip memrl-v0.1.3-macos-x64.zip -d memrl
+unzip tempera-v0.1.3-macos-x64.zip -d tempera
 ```
 
 #### Step 2: Install
 
 ```bash
 # Move to local bin
-sudo mv memrl/memrl /usr/local/bin/
-sudo mv memrl/memrl-mcp /usr/local/bin/
+sudo mv tempera/tempera /usr/local/bin/
+sudo mv tempera/tempera-mcp /usr/local/bin/
 
 # Make executable
-sudo chmod +x /usr/local/bin/memrl
-sudo chmod +x /usr/local/bin/memrl-mcp
+sudo chmod +x /usr/local/bin/tempera
+sudo chmod +x /usr/local/bin/tempera-mcp
 ```
 
 #### Step 3: Verify
 
 ```bash
-memrl --version
-memrl-mcp --version
+tempera --version
+tempera-mcp --version
 ```
 
 ### Option 2: Install from crates.io
 
 ```bash
-cargo install memrl
+cargo install tempera
 ```
 
 ---
@@ -165,39 +165,39 @@ cargo install memrl
 ```bash
 # Download the latest release
 cd ~/Downloads
-wget https://github.com/anvanster/memrl/releases/download/v0.1.3/memrl-v0.1.3-linux-x64.zip
-wget https://github.com/anvanster/memrl/releases/download/v0.1.3/memrl-v0.1.3-linux-x64.sha256
+wget https://github.com/anvanster/tempera/releases/download/v0.1.3/tempera-v0.1.3-linux-x64.zip
+wget https://github.com/anvanster/tempera/releases/download/v0.1.3/tempera-v0.1.3-linux-x64.sha256
 
 # Verify checksum
-sha256sum -c memrl-v0.1.3-linux-x64.sha256
+sha256sum -c tempera-v0.1.3-linux-x64.sha256
 
 # Extract
-unzip memrl-v0.1.3-linux-x64.zip -d memrl
+unzip tempera-v0.1.3-linux-x64.zip -d tempera
 ```
 
 #### Step 2: Install
 
 ```bash
 # Move to local bin
-sudo mv memrl/memrl /usr/local/bin/
-sudo mv memrl/memrl-mcp /usr/local/bin/
+sudo mv tempera/tempera /usr/local/bin/
+sudo mv tempera/tempera-mcp /usr/local/bin/
 
 # Make executable
-sudo chmod +x /usr/local/bin/memrl
-sudo chmod +x /usr/local/bin/memrl-mcp
+sudo chmod +x /usr/local/bin/tempera
+sudo chmod +x /usr/local/bin/tempera-mcp
 ```
 
 #### Step 3: Verify
 
 ```bash
-memrl --version
-memrl-mcp --version
+tempera --version
+tempera-mcp --version
 ```
 
 ### Option 2: Install from crates.io
 
 ```bash
-cargo install memrl
+cargo install tempera
 ```
 
 ---
@@ -235,15 +235,15 @@ cargo install memrl
 
 ```bash
 # Clone repository
-git clone https://github.com/anvanster/memrl.git
-cd memrl
+git clone https://github.com/anvanster/tempera.git
+cd tempera
 
 # Build release binaries
 cargo build --release
 
 # Binaries are created in:
-# - target/release/memrl      (CLI tool)
-# - target/release/memrl-mcp  (MCP server)
+# - target/release/tempera      (CLI tool)
+# - target/release/tempera-mcp  (MCP server)
 ```
 
 ### Install Built Binaries
@@ -251,17 +251,17 @@ cargo build --release
 **Windows:**
 ```powershell
 # Copy to local bin directory
-New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\memrl"
-Copy-Item target\release\memrl.exe "$env:LOCALAPPDATA\memrl\"
-Copy-Item target\release\memrl-mcp.exe "$env:LOCALAPPDATA\memrl\"
+New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\tempera"
+Copy-Item target\release\tempera.exe "$env:LOCALAPPDATA\tempera\"
+Copy-Item target\release\tempera-mcp.exe "$env:LOCALAPPDATA\tempera\"
 
 # Add to PATH (see Windows installation steps above)
 ```
 
 **macOS/Linux:**
 ```bash
-sudo cp target/release/memrl /usr/local/bin/
-sudo cp target/release/memrl-mcp /usr/local/bin/
+sudo cp target/release/tempera /usr/local/bin/
+sudo cp target/release/tempera-mcp /usr/local/bin/
 ```
 
 ---
@@ -272,20 +272,20 @@ sudo cp target/release/memrl-mcp /usr/local/bin/
 
 ```bash
 # Check version
-memrl --version
+tempera --version
 
 # View help
-memrl --help
+tempera --help
 
 # Check memory status
-memrl status
+tempera status
 ```
 
 ### Test MCP Server
 
 ```bash
 # Check version
-memrl-mcp --version
+tempera-mcp --version
 ```
 
 ---
@@ -300,8 +300,8 @@ memrl-mcp --version
 ```json
 {
   "servers": {
-    "memrl": {
-      "command": "C:\\Users\\YourUsername\\AppData\\Local\\memrl\\memrl-mcp.exe",
+    "tempera": {
+      "command": "C:\\Users\\YourUsername\\AppData\\Local\\tempera\\tempera-mcp.exe",
       "args": [],
       "env": {}
     }
@@ -309,27 +309,27 @@ memrl-mcp --version
 }
 ```
 
-**Important**: Replace `C:\\Users\\YourUsername\\AppData\\Local\\memrl\\memrl-mcp.exe` with the actual path where you installed memrl-mcp.exe.
+**Important**: Replace `C:\\Users\\YourUsername\\AppData\\Local\\tempera\\tempera-mcp.exe` with the actual path where you installed tempera-mcp.exe.
 
 To find the exact path:
 
 ```powershell
 # Windows
-(Get-Command memrl-mcp).Source
+(Get-Command tempera-mcp).Source
 
 # macOS/Linux
-which memrl-mcp
+which tempera-mcp
 ```
 
 3. Restart VS Code
-4. The memrl MCP server will be available to Claude Code
+4. The tempera MCP server will be available to Claude Code
 
 ### First Run - Model Download
 
-The first time you use memrl, it will download the embedding model (~90MB):
+The first time you use tempera, it will download the embedding model (~90MB):
 
 ```bash
-memrl status
+tempera status
 ```
 
 Output:
@@ -341,13 +341,13 @@ Output:
 ```
 
 The model is cached in:
-- **Windows**: `C:\Users\YourUsername\.cache\memrl\`
-- **macOS**: `~/Library/Caches/memrl/`
-- **Linux**: `~/.cache/memrl/`
+- **Windows**: `C:\Users\YourUsername\.cache\tempera\`
+- **macOS**: `~/Library/Caches/tempera/`
+- **Linux**: `~/.cache/tempera/`
 
 ### Optional: Custom Configuration
 
-Create `~/.memrl/config.toml` to customize settings:
+Create `~/.tempera/config.toml` to customize settings:
 
 ```toml
 # Memory settings
@@ -370,12 +370,12 @@ similarity_threshold = 0.7
 
 ### Windows: "Command not found"
 
-**Problem**: PowerShell doesn't recognize `memrl` command.
+**Problem**: PowerShell doesn't recognize `tempera` command.
 
 **Solutions**:
-1. Verify PATH was updated: `$env:Path -split ';' | Select-String memrl`
+1. Verify PATH was updated: `$env:Path -split ';' | Select-String tempera`
 2. Restart your terminal completely
-3. Try using the full path: `C:\Users\YourUsername\AppData\Local\memrl\memrl.exe --version`
+3. Try using the full path: `C:\Users\YourUsername\AppData\Local\tempera\tempera.exe --version`
 
 ### Windows: "Cannot be loaded because running scripts is disabled"
 
@@ -388,10 +388,10 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ### Windows: Antivirus Blocks Executable
 
-**Problem**: Windows Defender or antivirus quarantines memrl.exe.
+**Problem**: Windows Defender or antivirus quarantines tempera.exe.
 
 **Solution**:
-1. Add memrl installation directory to antivirus exclusions
+1. Add tempera installation directory to antivirus exclusions
 2. Or build from source yourself (antivirus trusts self-built binaries)
 
 ### macOS: "Cannot be opened because the developer cannot be verified"
@@ -401,8 +401,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 **Solution**:
 ```bash
 # Remove quarantine attribute
-xattr -d com.apple.quarantine /usr/local/bin/memrl
-xattr -d com.apple.quarantine /usr/local/bin/memrl-mcp
+xattr -d com.apple.quarantine /usr/local/bin/tempera
+xattr -d com.apple.quarantine /usr/local/bin/tempera-mcp
 ```
 
 ### All Platforms: "Error: Failed to initialize database"
@@ -411,13 +411,13 @@ xattr -d com.apple.quarantine /usr/local/bin/memrl-mcp
 
 **Solution**:
 ```bash
-# Check if memrl data directory exists
-# Windows: %APPDATA%\memrl\
-# macOS/Linux: ~/.memrl/
+# Check if tempera data directory exists
+# Windows: %APPDATA%\tempera\
+# macOS/Linux: ~/.tempera/
 
 # If corrupted, delete and reinitialize
-rm -rf ~/.memrl/episodes.db
-memrl status
+rm -rf ~/.tempera/episodes.db
+tempera status
 ```
 
 ### Build Error: "protoc not found" or "PROTOC environment variable not set"
@@ -428,11 +428,11 @@ memrl status
 
 ### MCP Server Not Appearing in Claude Code
 
-**Problem**: Claude Code doesn't show memrl tools.
+**Problem**: Claude Code doesn't show tempera tools.
 
 **Solutions**:
 1. Verify `.vscode/mcp.json` syntax is valid JSON
-2. Check the path to `memrl-mcp.exe` is correct
+2. Check the path to `tempera-mcp.exe` is correct
 3. Restart VS Code completely
 4. Check VS Code Developer Console for errors: `Help > Toggle Developer Tools`
 
@@ -443,14 +443,14 @@ memrl status
 After installation:
 
 1. **Read the README**: [README.md](../README.md) for usage examples
-2. **View CLI help**: `memrl --help`
-3. **Check memory status**: `memrl status`
+2. **View CLI help**: `tempera --help`
+3. **Check memory status**: `tempera status`
 4. **Start using with Claude**: Ask Claude to capture your first episode!
 
 ---
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/anvanster/memrl/issues)
-- **Repository**: [github.com/anvanster/memrl](https://github.com/anvanster/memrl)
+- **Issues**: [GitHub Issues](https://github.com/anvanster/tempera/issues)
+- **Repository**: [github.com/anvanster/tempera](https://github.com/anvanster/tempera)
 - **License**: Apache-2.0

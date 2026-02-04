@@ -1,6 +1,6 @@
-//! MemRL MCP Server
+//! Tempera MCP Server
 //!
-//! This binary implements the Model Context Protocol (MCP) server for MemRL,
+//! This binary implements the Model Context Protocol (MCP) server for Tempera,
 //! allowing Claude Code to access episodic memory functionality.
 
 // Allow common clippy warnings for prototype code
@@ -122,7 +122,7 @@ impl McpServer {
                 "tools": {}
             },
             "serverInfo": {
-                "name": "memrl",
+                "name": "tempera",
                 "version": env!("CARGO_PKG_VERSION")
             }
         }))
@@ -132,7 +132,7 @@ impl McpServer {
     fn handle_tools_list(&self) -> Result<Value, JsonRpcError> {
         let tools = vec![
             Tool {
-                name: "memrl_retrieve".to_string(),
+                name: "tempera_retrieve".to_string(),
                 description: "MANDATORY at session start for non-trivial tasks. Search episodic memory for similar problems you've solved before. If this is your first action in a session, always check for relevant memories first.".to_string(),
                 input_schema: json!({
                     "type": "object",
@@ -160,7 +160,7 @@ impl McpServer {
                 }),
             },
             Tool {
-                name: "memrl_capture".to_string(),
+                name: "tempera_capture".to_string(),
                 description: "MANDATORY after completing any feature, bugfix, or refactor. Don't wait for user to ask - proactively capture successful sessions. Automatically runs utility propagation after capture.".to_string(),
                 input_schema: json!({
                     "type": "object",
@@ -209,7 +209,7 @@ impl McpServer {
                 }),
             },
             Tool {
-                name: "memrl_feedback".to_string(),
+                name: "tempera_feedback".to_string(),
                 description: "Record whether retrieved episodes were helpful. Call this after using memories - your feedback improves future retrieval quality.".to_string(),
                 input_schema: json!({
                     "type": "object",
@@ -228,7 +228,7 @@ impl McpServer {
                 }),
             },
             Tool {
-                name: "memrl_stats".to_string(),
+                name: "tempera_stats".to_string(),
                 description: "Get statistics about the episodic memory system.".to_string(),
                 input_schema: json!({
                     "type": "object",
@@ -241,7 +241,7 @@ impl McpServer {
                 }),
             },
             Tool {
-                name: "memrl_status".to_string(),
+                name: "tempera_status".to_string(),
                 description: "Check memory health for current project. Shows last capture date, episode count, and unused memories. Use this to understand your memory state.".to_string(),
                 input_schema: json!({
                     "type": "object",
@@ -254,7 +254,7 @@ impl McpServer {
                 }),
             },
             Tool {
-                name: "memrl_propagate".to_string(),
+                name: "tempera_propagate".to_string(),
                 description: "Run utility propagation to spread value from helpful episodes to similar ones. Use periodically to improve memory quality.".to_string(),
                 input_schema: json!({
                     "type": "object",
@@ -272,7 +272,7 @@ impl McpServer {
                 }),
             },
             Tool {
-                name: "memrl_review".to_string(),
+                name: "tempera_review".to_string(),
                 description: "Review and consolidate memories after completing a series of related tasks. Identifies duplicate/similar episodes, stale memories, and optimization opportunities.".to_string(),
                 input_schema: json!({
                     "type": "object",
@@ -309,13 +309,13 @@ impl McpServer {
         let arguments = params.get("arguments").cloned().unwrap_or(json!({}));
 
         let result = match name {
-            "memrl_retrieve" => self.tool_retrieve(&arguments).await,
-            "memrl_capture" => self.tool_capture(&arguments).await,
-            "memrl_feedback" => self.tool_feedback(&arguments).await,
-            "memrl_stats" => self.tool_stats(&arguments).await,
-            "memrl_status" => self.tool_status(&arguments).await,
-            "memrl_propagate" => self.tool_propagate(&arguments).await,
-            "memrl_review" => self.tool_review(&arguments).await,
+            "tempera_retrieve" => self.tool_retrieve(&arguments).await,
+            "tempera_capture" => self.tool_capture(&arguments).await,
+            "tempera_feedback" => self.tool_feedback(&arguments).await,
+            "tempera_stats" => self.tool_stats(&arguments).await,
+            "tempera_status" => self.tool_status(&arguments).await,
+            "tempera_propagate" => self.tool_propagate(&arguments).await,
+            "tempera_review" => self.tool_review(&arguments).await,
             _ => Err(format!("Unknown tool: {}", name)),
         };
 
@@ -440,7 +440,7 @@ impl McpServer {
             output.push('\n');
         }
 
-        output.push_str("Use memrl_feedback to indicate if these were helpful.");
+        output.push_str("Use tempera_feedback to indicate if these were helpful.");
 
         // Record retrieval for tracking
         let _ = record_mcp_retrieval(&episodes, query, &store);
@@ -677,7 +677,7 @@ impl McpServer {
                 .or_insert(0) += 1;
         }
 
-        let mut output = String::from("MemRL Memory Statistics\n");
+        let mut output = String::from("Tempera Memory Statistics\n");
         output.push_str("=======================\n\n");
 
         if let Some(proj) = project_filter {
@@ -864,7 +864,7 @@ impl McpServer {
                 "📊 Memory Status for '{}'\n\
                  ========================\n\n\
                  No memories found for this project.\n\n\
-                 💡 Tip: After completing a task, use memrl_capture to save it.",
+                 💡 Tip: After completing a task, use tempera_capture to save it.",
                 project
             ));
         }
@@ -935,13 +935,13 @@ impl McpServer {
 
         if unused.len() > total_count / 2 {
             output.push_str(
-                "  - Many memories are unused. Consider running memrl_review to consolidate.\n",
+                "  - Many memories are unused. Consider running tempera_review to consolidate.\n",
             );
         }
 
         if avg_utility < 0.3 {
             output.push_str(
-                "  - Low average utility. Use memrl_feedback to mark helpful memories.\n",
+                "  - Low average utility. Use tempera_feedback to mark helpful memories.\n",
             );
         }
 

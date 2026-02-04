@@ -2,5 +2,5 @@ node_modules/
 tmp/
 
 # Platform-specific binaries (built by scripts/build-npm-package.sh)
-bin/memrl-*
-bin/memrl-mcp-*
+bin/tempera-*
+bin/tempera-mcp-*

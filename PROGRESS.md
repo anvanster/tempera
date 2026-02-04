@@ -1,14 +1,14 @@
-# MemRL Implementation Progress
+# Tempera Implementation Progress
 
 ## Overview
 
-MemRL is a memory-augmented reinforcement learning system for Claude Code that learns from past coding sessions to improve future assistance.
+Tempera is a persistent memory system for Claude Code that learns from past coding sessions to improve future assistance.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        MemRL System                              │
+│                        Tempera System                              │
 ├─────────────────────────────────────────────────────────────────┤
 │  Phase 1: Session Capture    │  Phase 2: Semantic Indexing      │
 │  ✅ COMPLETE                 │  ✅ COMPLETE                      │
@@ -48,7 +48,7 @@ MemRL is a memory-augmented reinforcement learning system for Claude Code that l
 
 **Episode Storage** (`src/store.rs`)
 - JSON-based episode persistence
-- Date-organized directory structure (`~/.memrl/episodes/YYYY-MM-DD/`)
+- Date-organized directory structure (`~/.tempera/episodes/YYYY-MM-DD/`)
 - List, load, and query episodes
 - Project-based filtering
 
@@ -120,18 +120,18 @@ propagation_threshold: 0.5 // 50% similarity minimum for propagation
 - Full MCP (Model Context Protocol) server implementation
 - JSON-RPC 2.0 over stdio
 - Seven MCP tools exposed:
-  - `memrl_retrieve`: Multi-mode retrieval tool (MANDATORY at session start)
+  - `tempera_retrieve`: Multi-mode retrieval tool (MANDATORY at session start)
     - Semantic search: `query: "search term"`
     - List all episodes: `all: true`
     - Show episode details: `query: "episode_id"`
-  - `memrl_capture`: Capture current session as an episode (MANDATORY after tasks)
+  - `tempera_capture`: Capture current session as an episode (MANDATORY after tasks)
     - Accepts optional `project` parameter for cross-project insights
     - Auto-runs utility propagation after capture
-  - `memrl_feedback`: Record whether retrieved episodes were helpful
-  - `memrl_stats`: Get memory statistics
-  - `memrl_status`: Check memory health for current project
-  - `memrl_propagate`: Run utility propagation with optional temporal credit
-  - `memrl_review`: Consolidate and cleanup memories (run after related task series)
+  - `tempera_feedback`: Record whether retrieved episodes were helpful
+  - `tempera_stats`: Get memory statistics
+  - `tempera_status`: Check memory health for current project
+  - `tempera_propagate`: Run utility propagation with optional temporal credit
+  - `tempera_review`: Consolidate and cleanup memories (run after related task series)
 - Automatic vector search with fallback
 - Claude Code integration via mcp-config.json
 
@@ -156,29 +156,29 @@ propagation_threshold: 0.5 // 50% similarity minimum for propagation
 
 | Command | Status | Description |
 |---------|--------|-------------|
-| `memrl init` | ✅ | Initialize memrl in current project |
-| `memrl capture` | ✅ | Capture a coding session as an episode |
-| `memrl capture --extract-intent` | ✅ | Capture with LLM-based intent extraction |
-| `memrl list` | ✅ | List all episodes with filtering |
-| `memrl show <id>` | ✅ | Show detailed episode information |
-| `memrl stats` | ✅ | Display statistics and metrics |
-| `memrl retrieve <query>` | ✅ | Semantic search for relevant episodes |
-| `memrl feedback` | ✅ | Record feedback on retrieved episodes |
-| `memrl index` | ✅ | Create/update vector embeddings |
-| `memrl propagate` | ✅ | Run Bellman utility propagation |
-| `memrl prune` | ✅ | Remove old/low-utility episodes |
+| `tempera init` | ✅ | Initialize tempera in current project |
+| `tempera capture` | ✅ | Capture a coding session as an episode |
+| `tempera capture --extract-intent` | ✅ | Capture with LLM-based intent extraction |
+| `tempera list` | ✅ | List all episodes with filtering |
+| `tempera show <id>` | ✅ | Show detailed episode information |
+| `tempera stats` | ✅ | Display statistics and metrics |
+| `tempera retrieve <query>` | ✅ | Semantic search for relevant episodes |
+| `tempera feedback` | ✅ | Record feedback on retrieved episodes |
+| `tempera index` | ✅ | Create/update vector embeddings |
+| `tempera propagate` | ✅ | Run Bellman utility propagation |
+| `tempera prune` | ✅ | Remove old/low-utility episodes |
 
 ### Binaries
 
 | Binary | Description |
 |--------|-------------|
-| `memrl` | Main CLI application |
-| `memrl-mcp` | MCP server for Claude Code integration |
+| `tempera` | Main CLI application |
+| `tempera-mcp` | MCP server for Claude Code integration |
 
 ## Test Results
 
 ```
-running 17 tests (memrl)
+running 17 tests (tempera)
 test stats::tests::test_percentage ... ok
 test feedback::tests::test_parse_feedback_type ... ok
 test config::tests::test_default_config ... ok
@@ -199,7 +199,7 @@ test capture::tests::test_extract_first_prompt ... ok
 
 test result: ok. 17 passed; 0 failed
 
-running 12 tests (memrl-mcp)
+running 12 tests (tempera-mcp)
 ... all pass
 ```
 
@@ -235,7 +235,7 @@ git2 = "0.19"          # Git operations
 ## Directory Structure
 
 ```
-~/.memrl/
+~/.tempera/
 ├── config.toml              # Configuration file
 ├── feedback.log             # Feedback history
 ├── episodes/                # Episode storage
@@ -249,12 +249,12 @@ git2 = "0.19"          # Git operations
 
 1. Build the MCP server:
 ```bash
-cargo build --release --bin memrl-mcp
+cargo build --release --bin tempera-mcp
 ```
 
 2. Add to Claude Code using the CLI (recommended):
 ```bash
-claude mcp add memrl --scope user -- /path/to/memrl-mcp
+claude mcp add tempera --scope user -- /path/to/tempera-mcp
 ```
 
 The `--scope user` flag makes it available across all projects. Configuration is stored in `~/.claude.json`.
@@ -263,8 +263,8 @@ Alternatively, edit `~/.claude.json` directly:
 ```json
 {
   "mcpServers": {
-    "memrl": {
-      "command": "/path/to/memrl-mcp",
+    "tempera": {
+      "command": "/path/to/tempera-mcp",
       "args": []
     }
   }
@@ -274,13 +274,13 @@ Alternatively, edit `~/.claude.json` directly:
 3. Restart Claude Code and verify with `/mcp` command.
 
 4. The following 7 tools become available to Claude:
-   - `memrl_retrieve` - Search, list, or show episode details (use at session start)
-   - `memrl_capture` - Save current session to memory (use after completing tasks)
-   - `memrl_feedback` - Mark episodes as helpful/unhelpful
-   - `memrl_status` - Check memory health for current project
-   - `memrl_stats` - View memory statistics
-   - `memrl_propagate` - Run utility propagation
-   - `memrl_review` - Consolidate and cleanup memories
+   - `tempera_retrieve` - Search, list, or show episode details (use at session start)
+   - `tempera_capture` - Save current session to memory (use after completing tasks)
+   - `tempera_feedback` - Mark episodes as helpful/unhelpful
+   - `tempera_status` - Check memory health for current project
+   - `tempera_stats` - View memory statistics
+   - `tempera_propagate` - Run utility propagation
+   - `tempera_review` - Consolidate and cleanup memories
 
 ## Hook Integration
 
@@ -291,8 +291,8 @@ Install hooks for automatic session capture:
 cp hooks/*.sh ~/.claude/hooks/
 
 # Or configure via Claude Code CLI:
-claude config set hooks.post-session "/path/to/memrl/hooks/post-session.sh"
-claude config set hooks.pre-task "/path/to/memrl/hooks/pre-task.sh"
+claude config set hooks.post-session "/path/to/tempera/hooks/post-session.sh"
+claude config set hooks.pre-task "/path/to/tempera/hooks/pre-task.sh"
 ```
 
 ## Future Enhancements
@@ -307,39 +307,39 @@ claude config set hooks.pre-task "/path/to/memrl/hooks/pre-task.sh"
 
 ```bash
 # Initialize in a project
-memrl init
+tempera init
 
 # Capture a session with LLM analysis
-memrl capture --session transcript.txt --extract-intent
+tempera capture --session transcript.txt --extract-intent
 
 # Index for semantic search
-memrl index
+tempera index
 
 # Find relevant past experiences
-memrl retrieve "fix authentication bug"
+tempera retrieve "fix authentication bug"
 
 # Provide feedback
-memrl feedback helpful --episodes abc123,def456
+tempera feedback helpful --episodes abc123,def456
 
 # Run utility propagation
-memrl propagate --temporal
+tempera propagate --temporal
 
 # Prune old episodes (dry run)
-memrl prune --older-than 90 --min-utility 0.3
+tempera prune --older-than 90 --min-utility 0.3
 
 # View statistics
-memrl stats
+tempera stats
 ```
 
 ## MCP Tool Example
 
-When Claude Code has MemRL integrated via MCP:
+When Claude Code has Tempera integrated via MCP:
 
 ```
 User: Fix the login redirect bug
 
 Claude: Let me check if we've solved similar problems before...
-[Calls memrl_retrieve with query "login redirect bug"]
+[Calls tempera_retrieve with query "login redirect bug"]
 
 Found 2 relevant past experiences:
 1. fix the authentication bug in the login flow
@@ -349,7 +349,7 @@ Found 2 relevant past experiences:
 Let me apply a similar approach...
 [Works on the fix]
 
-[Calls memrl_capture to save this session]
+[Calls tempera_capture to save this session]
 Episode captured: abc12345
 ```
 
@@ -357,7 +357,7 @@ Episode captured: abc12345
 
 ## Working Example
 
-MemRL is actively used in this project! Current memory stats:
+Tempera is actively used in this project! Current memory stats:
 - 12+ episodes captured
 - Semantic search working with BGE-Small embeddings
 - 5 MCP tools operational

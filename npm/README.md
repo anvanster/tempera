@@ -1,45 +1,45 @@
-# @anvanster/memrl
+# @anvanster/tempera
 
-Memory-augmented reinforcement learning for Claude Code - persistent memory that learns from experience.
+Tempera - persistent memory for Claude Code that learns from experience.
 
 ## Installation
 
 ```bash
-npm install -g @anvanster/memrl
+npm install -g @anvanster/tempera
 ```
 
 ## Usage
 
 After installation, you have access to two commands:
 
-- `memrl` - CLI tool for managing memories
-- `memrl-mcp` - MCP server for Claude Code integration
+- `tempera` - CLI tool for managing memories
+- `tempera-mcp` - MCP server for Claude Code integration
 
 ### Setup with Claude Code
 
 ```bash
-claude mcp add memrl --scope user -- memrl-mcp
+claude mcp add tempera --scope user -- tempera-mcp
 ```
 
 ### CLI Commands
 
 ```bash
-# Initialize MemRL
-memrl init
+# Initialize Tempera
+tempera init
 
 # Capture an episode
-memrl capture --prompt "Fixed the auth bug"
+tempera capture --prompt "Fixed the auth bug"
 
 # Search memories
-memrl retrieve "database issues"
+tempera retrieve "database issues"
 
 # View statistics
-memrl stats
+tempera stats
 ```
 
 ## Documentation
 
-See the [full documentation](https://github.com/anvanster/memrl) for more details.
+See the [full documentation](https://github.com/anvanster/tempera) for more details.
 
 ## License
 

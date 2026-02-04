@@ -23,8 +23,8 @@ mod store;
 mod utility;
 
 #[derive(Parser)]
-#[command(name = "memrl")]
-#[command(about = "MemRL-inspired memory system for Claude Code")]
+#[command(name = "tempera")]
+#[command(about = "Tempera - persistent memory system for Claude Code")]
 #[command(version)]
 struct Cli {
     #[command(subcommand)]
@@ -145,7 +145,7 @@ enum Commands {
         execute: bool,
     },
 
-    /// Initialize memrl in current project
+    /// Initialize tempera in current project
     Init,
 }
 
@@ -311,38 +311,38 @@ fn run_prune(older_than: Option<u32>, min_utility: Option<f32>, execute: bool) -
 fn init_project() -> Result<()> {
     use std::fs;
 
-    let memrl_dir = dirs::home_dir()
+    let tempera_dir = dirs::home_dir()
         .expect("Could not find home directory")
-        .join(".memrl");
+        .join(".tempera");
 
     // Create directories
-    fs::create_dir_all(memrl_dir.join("episodes"))?;
-    println!("✓ Created {}", memrl_dir.display());
+    fs::create_dir_all(tempera_dir.join("episodes"))?;
+    println!("✓ Created {}", tempera_dir.display());
 
     // Create today's directory
     let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
-    fs::create_dir_all(memrl_dir.join("episodes").join(&today))?;
+    fs::create_dir_all(tempera_dir.join("episodes").join(&today))?;
     println!("✓ Created episodes/{}", today);
 
     // Initialize feedback log
-    let feedback_path = memrl_dir.join("feedback.log");
+    let feedback_path = tempera_dir.join("feedback.log");
     if !feedback_path.exists() {
         fs::write(&feedback_path, "")?;
         println!("✓ Initialized feedback log");
     }
 
     // Create config if not exists
-    let config_path = memrl_dir.join("config.toml");
+    let config_path = tempera_dir.join("config.toml");
     if !config_path.exists() {
         let default_config = include_str!("../default_config.toml");
         fs::write(&config_path, default_config)?;
         println!("✓ Created default config");
     }
 
-    println!("\n🎉 MemRL initialized!");
+    println!("\n🎉 Tempera initialized!");
     println!("\nNext steps:");
-    println!("  memrl capture --session /path/to/transcript");
-    println!("  memrl retrieve \"your task description\"");
+    println!("  tempera capture --session /path/to/transcript");
+    println!("  tempera retrieve \"your task description\"");
 
     Ok(())
 }
