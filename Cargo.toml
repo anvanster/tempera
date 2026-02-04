@@ -1,6 +1,6 @@
 [package]
 name = "memrl"
-version = "0.1.3"
+version = "0.2.0"
 edition = "2024"
 description = "Memory-augmented reinforcement learning for Claude Code - persistent memory that learns from experience"
 authors = ["Andrey Vasilevsky"]
@@ -28,7 +28,7 @@ toml = "0.8"
 sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
 
 # Vector database
-vectrust = { path = "../vectrust/crates/vectrust" }
+vectrust = "0.1"
 
 # Embeddings
 fastembed = "4"

@@ -1440,7 +1440,11 @@ fn text_overlap(a: &episode::Episode, b: &episode::Episode) -> f32 {
     let intersection = a_words.intersection(&b_words).count();
     let union = a_words.union(&b_words).count();
 
-    if union == 0 { 0.0 } else { intersection as f32 / union as f32 }
+    if union == 0 {
+        0.0
+    } else {
+        intersection as f32 / union as f32
+    }
 }
 
 /// Record retrieval for tracking

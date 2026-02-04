@@ -350,8 +350,8 @@ fn apply_mmr(mut candidates: Vec<ScoredEpisode>, limit: usize, lambda: f32) -> V
                     .fold(0.0_f32, |a, b| a.max(b));
 
                 // MMR score: λ * relevance - (1-λ) * redundancy
-                let mmr_score = lambda * candidate.combined_score
-                    - (1.0 - lambda) * max_sim_to_selected;
+                let mmr_score =
+                    lambda * candidate.combined_score - (1.0 - lambda) * max_sim_to_selected;
 
                 (idx, mmr_score)
             })

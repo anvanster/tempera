@@ -165,8 +165,7 @@ impl EpisodeIndexer {
         let embedding_text = Self::episode_to_embedding_text(episode);
         let embedding = self.embed(&embedding_text)?;
 
-        let id = Uuid::parse_str(&episode.id)
-            .unwrap_or_else(|_| Uuid::new_v4());
+        let id = Uuid::parse_str(&episode.id).unwrap_or_else(|_| Uuid::new_v4());
 
         let metadata = serde_json::json!({
             "episode_id": episode.id,
@@ -231,7 +230,10 @@ impl EpisodeIndexer {
             items
                 .iter()
                 .filter_map(|item| {
-                    item.metadata.get("episode_id").and_then(|v| v.as_str()).map(|s| s.to_string())
+                    item.metadata
+                        .get("episode_id")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
                 })
                 .collect()
         } else {
@@ -353,7 +355,10 @@ impl EpisodeIndexer {
     /// Get index statistics
     pub async fn get_stats(&self) -> Result<IndexStats> {
         let index = self.open_index().await?;
-        let stats = index.get_stats().await.context("Failed to get index stats")?;
+        let stats = index
+            .get_stats()
+            .await
+            .context("Failed to get index stats")?;
 
         Ok(IndexStats {
             total_indexed: stats.items,
