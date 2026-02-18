@@ -55,7 +55,7 @@ pub async fn run(
 }
 
 /// Try to retrieve episodes using vector search
-async fn try_vector_search(
+pub async fn try_vector_search(
     query: &str,
     limit: usize,
     project_filter: Option<&str>,
@@ -327,7 +327,11 @@ pub struct ScoredEpisode {
 
 /// Apply Maximal Marginal Relevance (MMR) for result diversity
 /// lambda: 0.0 = pure diversity, 1.0 = pure relevance
-fn apply_mmr(mut candidates: Vec<ScoredEpisode>, limit: usize, lambda: f32) -> Vec<ScoredEpisode> {
+pub fn apply_mmr(
+    mut candidates: Vec<ScoredEpisode>,
+    limit: usize,
+    lambda: f32,
+) -> Vec<ScoredEpisode> {
     if candidates.is_empty() || limit == 0 {
         return vec![];
     }
@@ -369,7 +373,7 @@ fn apply_mmr(mut candidates: Vec<ScoredEpisode>, limit: usize, lambda: f32) -> V
 }
 
 /// Calculate text overlap between two episodes for MMR diversity
-fn text_overlap_similarity(a: &Episode, b: &Episode) -> f32 {
+pub fn text_overlap_similarity(a: &Episode, b: &Episode) -> f32 {
     let a_text = format!(
         "{} {} {}",
         a.intent.raw_prompt.to_lowercase(),

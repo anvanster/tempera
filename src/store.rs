@@ -242,18 +242,7 @@ impl EpisodeStore {
             .collect();
 
         let total = filtered.len();
-        let success_count = filtered
-            .iter()
-            .filter(|e| e.outcome.status == OutcomeStatus::Success)
-            .count();
-        let partial_count = filtered
-            .iter()
-            .filter(|e| e.outcome.status == OutcomeStatus::Partial)
-            .count();
-        let failure_count = filtered
-            .iter()
-            .filter(|e| e.outcome.status == OutcomeStatus::Failure)
-            .count();
+        let (success_count, partial_count, failure_count) = count_outcomes(&filtered);
 
         let total_retrievals: u32 = filtered.iter().map(|e| e.utility.retrieval_count).sum();
         let total_helpful: u32 = filtered.iter().map(|e| e.utility.helpful_count).sum();
@@ -268,22 +257,9 @@ impl EpisodeStore {
             0.0
         };
 
-        // Collect unique projects
         let mut projects: Vec<String> = filtered.iter().map(|e| e.project.clone()).collect();
         projects.sort();
         projects.dedup();
-
-        // Collect most common tags
-        let mut tag_counts: std::collections::HashMap<String, usize> =
-            std::collections::HashMap::new();
-        for ep in &filtered {
-            for tag in &ep.intent.domain {
-                *tag_counts.entry(tag.clone()).or_insert(0) += 1;
-            }
-        }
-        let mut top_tags: Vec<(String, usize)> = tag_counts.into_iter().collect();
-        top_tags.sort_by(|a, b| b.1.cmp(&a.1));
-        top_tags.truncate(10);
 
         Ok(EpisodeStats {
             total,
@@ -294,7 +270,7 @@ impl EpisodeStore {
             total_helpful,
             avg_utility,
             projects,
-            top_tags,
+            top_tags: compute_top_tags(&filtered, 10),
         })
     }
 }
@@ -311,6 +287,37 @@ pub struct EpisodeStats {
     pub avg_utility: f32,
     pub projects: Vec<String>,
     pub top_tags: Vec<(String, usize)>,
+}
+
+/// Count outcomes by status
+fn count_outcomes(episodes: &[&Episode]) -> (usize, usize, usize) {
+    let success = episodes
+        .iter()
+        .filter(|e| e.outcome.status == OutcomeStatus::Success)
+        .count();
+    let partial = episodes
+        .iter()
+        .filter(|e| e.outcome.status == OutcomeStatus::Partial)
+        .count();
+    let failure = episodes
+        .iter()
+        .filter(|e| e.outcome.status == OutcomeStatus::Failure)
+        .count();
+    (success, partial, failure)
+}
+
+/// Compute the most common tags
+fn compute_top_tags(episodes: &[&Episode], limit: usize) -> Vec<(String, usize)> {
+    let mut tag_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for ep in episodes {
+        for tag in &ep.intent.domain {
+            *tag_counts.entry(tag.clone()).or_insert(0) += 1;
+        }
+    }
+    let mut top_tags: Vec<(String, usize)> = tag_counts.into_iter().collect();
+    top_tags.sort_by(|a, b| b.1.cmp(&a.1));
+    top_tags.truncate(limit);
+    top_tags
 }
 
 #[cfg(test)]

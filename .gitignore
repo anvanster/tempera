@@ -3,6 +3,7 @@
 npm/
 /releases/
 .smelt/
+.stellarion/
 /target/
 **/*.rs.bk
 Cargo.lock

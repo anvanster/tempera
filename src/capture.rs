@@ -51,55 +51,10 @@ pub async fn run(
     episode.outcome.status = outcome_status;
 
     // Extract intent with classification
-    if extract_intent {
-        // Try LLM-based extraction first
-        match extract_intent_with_llm(&raw_prompt, session.as_ref()).await {
-            Ok(analysis) => {
-                println!("🤖 Using LLM-based intent extraction...");
-                episode.intent.extracted_intent = analysis.summary;
-                episode.intent.task_type = analysis.task_type;
-                episode.intent.domain = analysis.tags;
-                if !analysis.files_modified.is_empty() {
-                    episode
-                        .context
-                        .files_modified
-                        .extend(analysis.files_modified);
-                    episode.context.files_modified.sort();
-                    episode.context.files_modified.dedup();
-                }
-                for err in analysis.errors_resolved {
-                    episode.context.errors_encountered.push(ErrorRecord {
-                        error_type: "runtime".to_string(),
-                        message: err.error,
-                        resolved: err.resolution.is_some(),
-                        resolution: err.resolution,
-                    });
-                }
-                // Use LLM-determined outcome if available
-                episode.outcome.status = analysis.outcome;
-            }
-            Err(e) => {
-                println!("⚠️  LLM extraction failed ({}), using simple extraction", e);
-                episode.intent.extracted_intent = extract_intent_simple(&raw_prompt);
-                episode.intent.task_type = classify_task_type(&raw_prompt);
-                episode.intent.domain = extract_domain_tags(&raw_prompt, &episode.context);
-            }
-        }
-    } else {
-        // Always do basic extraction
-        episode.intent.extracted_intent = extract_intent_simple(&raw_prompt);
-        episode.intent.task_type = classify_task_type(&raw_prompt);
-        episode.intent.domain = extract_domain_tags(&raw_prompt, &episode.context);
-    }
+    apply_intent_extraction(&mut episode, &raw_prompt, session.as_ref(), extract_intent).await;
 
     // Try to get git info
-    if let Ok(repo) = Repository::open(&project_dir) {
-        if let Ok(head) = repo.head() {
-            if let Some(oid) = head.target() {
-                episode.outcome.commit_sha = Some(oid.to_string()[..8].to_string());
-            }
-        }
-    }
+    episode.outcome.commit_sha = get_head_commit_sha(&project_dir);
 
     // Save the episode
     let store = EpisodeStore::new()?;
@@ -330,6 +285,59 @@ fn determine_outcome(transcript: &str) -> OutcomeStatus {
         OutcomeStatus::Failure
     } else {
         OutcomeStatus::Partial
+    }
+}
+
+/// Get the short SHA of the HEAD commit
+fn get_head_commit_sha(project_dir: &std::path::Path) -> Option<String> {
+    let repo = Repository::open(project_dir).ok()?;
+    let oid = repo.head().ok()?.target()?;
+    Some(oid.to_string()[..8].to_string())
+}
+
+/// Apply intent extraction (LLM with fallback to simple extraction)
+async fn apply_intent_extraction(
+    episode: &mut Episode,
+    raw_prompt: &str,
+    session: Option<&PathBuf>,
+    extract_intent: bool,
+) {
+    if extract_intent {
+        match extract_intent_with_llm(raw_prompt, session).await {
+            Ok(analysis) => {
+                println!("🤖 Using LLM-based intent extraction...");
+                episode.intent.extracted_intent = analysis.summary;
+                episode.intent.task_type = analysis.task_type;
+                episode.intent.domain = analysis.tags;
+                if !analysis.files_modified.is_empty() {
+                    episode
+                        .context
+                        .files_modified
+                        .extend(analysis.files_modified);
+                    episode.context.files_modified.sort();
+                    episode.context.files_modified.dedup();
+                }
+                for err in analysis.errors_resolved {
+                    episode.context.errors_encountered.push(ErrorRecord {
+                        error_type: "runtime".to_string(),
+                        message: err.error,
+                        resolved: err.resolution.is_some(),
+                        resolution: err.resolution,
+                    });
+                }
+                episode.outcome.status = analysis.outcome;
+            }
+            Err(e) => {
+                println!("⚠️  LLM extraction failed ({}), using simple extraction", e);
+                episode.intent.extracted_intent = extract_intent_simple(raw_prompt);
+                episode.intent.task_type = classify_task_type(raw_prompt);
+                episode.intent.domain = extract_domain_tags(raw_prompt, &episode.context);
+            }
+        }
+    } else {
+        episode.intent.extracted_intent = extract_intent_simple(raw_prompt);
+        episode.intent.task_type = classify_task_type(raw_prompt);
+        episode.intent.domain = extract_domain_tags(raw_prompt, &episode.context);
     }
 }
 

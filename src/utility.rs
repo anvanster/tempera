@@ -76,7 +76,7 @@ pub async fn run_propagation() -> Result<PropagationResult> {
 
     // Step 2: Bellman propagation (if we have the vector index)
     println!("  🔄 Running Bellman propagation...");
-    match run_bellman_propagation(&store, &params).await {
+    match run_bellman_propagation(&store, &params, None).await {
         Ok((propagated, change)) => {
             result.propagated_episodes = propagated;
             result.total_utility_change += change;
@@ -148,9 +148,10 @@ fn apply_utility_decay(
 }
 
 /// Run Bellman-style utility propagation using vector similarity
-async fn run_bellman_propagation(
+pub async fn run_bellman_propagation(
     store: &EpisodeStore,
     params: &UtilityParams,
+    project_filter: Option<&str>,
 ) -> Result<(usize, f64)> {
     let indexer = EpisodeIndexer::new().await?;
 
@@ -158,7 +159,15 @@ async fn run_bellman_propagation(
         anyhow::bail!("Vector index not available");
     }
 
-    let episodes = store.list_all()?;
+    let all_episodes = store.list_all()?;
+    let episodes: Vec<_> = if let Some(proj) = project_filter {
+        all_episodes
+            .into_iter()
+            .filter(|e| e.project.to_lowercase().contains(&proj.to_lowercase()))
+            .collect()
+    } else {
+        all_episodes
+    };
     let mut propagated = 0;
     let mut total_change = 0.0;
 
@@ -195,7 +204,7 @@ async fn run_bellman_propagation(
         );
 
         // Find similar episodes
-        let similar = indexer.search(&query, 10, None).await?;
+        let similar = indexer.search(&query, 10, project_filter).await?;
 
         for result in similar {
             // Skip self
