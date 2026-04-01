@@ -1,3 +1,6 @@
+// Copyright 2024-2026 Andrey Vasilevsky <anvanster@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
 // Allow common clippy warnings for prototype code
 #![allow(clippy::collapsible_if)]
 #![allow(clippy::single_char_add_str)]

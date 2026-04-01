@@ -1,3 +1,6 @@
+// Copyright 2024-2026 Andrey Vasilevsky <anvanster@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
 use serde_json::Value;
 
 use crate::mcp::helpers::{extract_project, extract_string_array};
