@@ -78,10 +78,8 @@ pub async fn try_vector_search(
     for result in search_results {
         if let Ok(episode) = store.load(&result.id) {
             let utility = episode.utility.calculate_score();
-
-            // Combine similarity and utility scores
-            let combined = (1.0 - config.retrieval.utility_weight) * result.similarity_score
-                + config.retrieval.utility_weight * utility;
+            let recency = calculate_recency_score(&episode, config.retrieval.recency_halflife_days);
+            let combined = combined_score(result.similarity_score, utility, recency, config);
 
             episodes.push(ScoredEpisode {
                 episode,
@@ -102,8 +100,8 @@ pub async fn try_vector_search(
     // Filter by minimum similarity
     episodes.retain(|e| e.similarity_score >= config.retrieval.min_similarity);
 
-    // Apply MMR for diversity (lambda=0.7: 70% relevance, 30% diversity)
-    let episodes = apply_mmr(episodes, limit, 0.7);
+    // Apply MMR for diversity
+    let episodes = apply_mmr(episodes, limit, config.retrieval.mmr_lambda);
 
     Ok(episodes)
 }
@@ -132,10 +130,8 @@ pub fn retrieve_episodes_text(
         .map(|ep| {
             let similarity = calculate_text_similarity(query, &ep);
             let utility = ep.utility.calculate_score();
-
-            // Combine similarity and utility scores
-            let combined = (1.0 - config.retrieval.utility_weight) * similarity
-                + config.retrieval.utility_weight * utility;
+            let recency = calculate_recency_score(&ep, config.retrieval.recency_halflife_days);
+            let combined = combined_score(similarity, utility, recency, config);
 
             ScoredEpisode {
                 episode: ep,
@@ -154,10 +150,32 @@ pub fn retrieve_episodes_text(
             .unwrap_or(std::cmp::Ordering::Equal)
     });
 
-    // Apply MMR for diversity (lambda=0.7: 70% relevance, 30% diversity)
-    let scored = apply_mmr(scored, limit, 0.7);
+    // Apply MMR for diversity
+    let scored = apply_mmr(scored, limit, config.retrieval.mmr_lambda);
 
     Ok(scored)
+}
+
+/// Calculate recency score using exponential decay with configurable half-life.
+/// Returns 1.0 for episodes created now, 0.5 at halflife_days, approaches 0.0 for old episodes.
+fn calculate_recency_score(episode: &Episode, halflife_days: f32) -> f32 {
+    let age_days = (Utc::now() - episode.timestamp_end).num_hours() as f32 / 24.0;
+    if halflife_days <= 0.0 {
+        return 1.0;
+    }
+    (-age_days * 2.0_f32.ln() / halflife_days).exp()
+}
+
+/// Combine similarity, utility, and recency scores with weight normalization.
+fn combined_score(similarity: f32, utility: f32, recency: f32, config: &Config) -> f32 {
+    let sim_w = config.retrieval.similarity_weight;
+    let util_w = config.retrieval.utility_weight;
+    let rec_w = config.retrieval.recency_weight;
+    let total = sim_w + util_w + rec_w;
+    if total == 0.0 {
+        return 0.0;
+    }
+    (sim_w * similarity + util_w * utility + rec_w * recency) / total
 }
 
 /// Calculate text-based similarity between query and episode
@@ -422,5 +440,42 @@ mod tests {
         // Unrelated query
         let similarity = calculate_text_similarity("database migration", &episode);
         assert!(similarity < 0.3);
+    }
+
+    #[test]
+    fn test_recency_score() {
+        // A brand-new episode should score close to 1.0
+        let ep = Episode::new("test".to_string(), "prompt".to_string());
+        let score = calculate_recency_score(&ep, 30.0);
+        assert!(score > 0.99, "Fresh episode should be ~1.0, got {}", score);
+
+        // halflife_days=0 should always return 1.0
+        let score_zero = calculate_recency_score(&ep, 0.0);
+        assert!((score_zero - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_combined_score_normalization() {
+        let config = Config::default();
+
+        // With default weights (sim=0.3, util=0.7, rec=0.0), should match old behavior
+        let score = combined_score(0.8, 0.6, 1.0, &config);
+        // (0.3*0.8 + 0.7*0.6 + 0.0*1.0) / (0.3+0.7+0.0) = (0.24+0.42)/1.0 = 0.66
+        assert!(
+            (score - 0.66).abs() < 0.01,
+            "Default weights: expected ~0.66, got {}",
+            score
+        );
+
+        // With recency enabled, scores should normalize
+        let mut config2 = Config::default();
+        config2.retrieval.recency_weight = 0.2;
+        let score2 = combined_score(0.8, 0.6, 1.0, &config2);
+        // (0.3*0.8 + 0.7*0.6 + 0.2*1.0) / (0.3+0.7+0.2) = (0.24+0.42+0.2)/1.2 = 0.7167
+        assert!(
+            (score2 - 0.7167).abs() < 0.01,
+            "With recency: expected ~0.717, got {}",
+            score2
+        );
     }
 }

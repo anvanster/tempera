@@ -19,6 +19,12 @@ pub struct Episode {
     pub utility: Utility,
     #[serde(default)]
     pub retrieval_history: Vec<RetrievalRecord>,
+    /// Groups episodes in the same logical session (multi-step task)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    /// Explicit links to related episodes
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_episodes: Vec<RelatedEpisode>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -151,6 +157,27 @@ pub struct RetrievalRecord {
     pub was_helpful: Option<bool>,
 }
 
+/// A link to a related episode
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RelatedEpisode {
+    pub id: String,
+    pub relationship: EpisodeRelation,
+}
+
+/// The type of relationship between two episodes
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum EpisodeRelation {
+    /// Same task, next step
+    Continuation,
+    /// This episode was needed before the other
+    Prerequisite,
+    /// Different approach to the same problem
+    Alternative,
+    /// Loosely related
+    Related,
+}
+
 impl Episode {
     pub fn new(project: String, raw_prompt: String) -> Self {
         Self {
@@ -179,6 +206,8 @@ impl Episode {
             },
             utility: Utility::default(),
             retrieval_history: vec![],
+            session_id: None,
+            related_episodes: vec![],
         }
     }
 
@@ -201,7 +230,11 @@ impl Episode {
             self.timestamp_start.format("%Y-%m-%d %H:%M:%S UTC")
         ));
         md.push_str(&format!("**Project**: {}\n", self.project));
-        md.push_str(&format!("**Outcome**: {}\n\n", self.outcome.status));
+        md.push_str(&format!("**Outcome**: {}\n", self.outcome.status));
+        if let Some(sid) = &self.session_id {
+            md.push_str(&format!("**Session**: {}\n", &sid[..8.min(sid.len())]));
+        }
+        md.push('\n');
 
         md.push_str("## Intent\n\n");
         md.push_str(&format!("{}\n\n", self.intent.raw_prompt));
@@ -250,6 +283,24 @@ impl Episode {
 
         md.push_str("## Tags\n\n");
         md.push_str(&format!("{}\n\n", self.intent.domain.join(", ")));
+
+        if !self.related_episodes.is_empty() {
+            md.push_str("## Related Episodes\n\n");
+            for rel in &self.related_episodes {
+                let rel_type = match rel.relationship {
+                    EpisodeRelation::Continuation => "continuation",
+                    EpisodeRelation::Prerequisite => "prerequisite",
+                    EpisodeRelation::Alternative => "alternative",
+                    EpisodeRelation::Related => "related",
+                };
+                md.push_str(&format!(
+                    "- {} ({})\n",
+                    &rel.id[..8.min(rel.id.len())],
+                    rel_type
+                ));
+            }
+            md.push('\n');
+        }
 
         if !self.retrieval_history.is_empty() {
             md.push_str("## Retrieval History\n\n");
@@ -368,5 +419,79 @@ mod tests {
             helpful_count: 0,
         };
         assert!(utility.calculate_score() < 0.3);
+    }
+
+    #[test]
+    fn test_backward_compat_deserialization() {
+        // Old JSON without session_id and related_episodes should deserialize fine
+        let json = r#"{
+            "id": "test-1234-5678-abcd",
+            "timestamp_start": "2026-03-01T10:00:00Z",
+            "timestamp_end": "2026-03-01T11:00:00Z",
+            "project": "test-proj",
+            "intent": {
+                "raw_prompt": "fix the bug",
+                "extracted_intent": "fix auth bug",
+                "task_type": "bugfix",
+                "domain": ["rust", "auth"]
+            },
+            "context": {
+                "files_read": [],
+                "files_modified": ["src/auth.rs"],
+                "tools_invoked": [],
+                "errors_encountered": []
+            },
+            "outcome": {
+                "status": "success",
+                "tests_before": null,
+                "tests_after": null,
+                "commit_sha": null,
+                "pr_number": null
+            },
+            "utility": {
+                "score": null,
+                "retrieval_count": 3,
+                "helpful_count": 2
+            }
+        }"#;
+        let ep: Episode = serde_json::from_str(json).unwrap();
+        assert_eq!(ep.id, "test-1234-5678-abcd");
+        assert!(ep.session_id.is_none());
+        assert!(ep.related_episodes.is_empty());
+        assert!(ep.retrieval_history.is_empty());
+    }
+
+    #[test]
+    fn test_session_fields_serialization() {
+        let mut ep = Episode::new("test".to_string(), "prompt".to_string());
+        ep.session_id = Some("session-abc".to_string());
+        ep.related_episodes.push(RelatedEpisode {
+            id: "related-123".to_string(),
+            relationship: EpisodeRelation::Continuation,
+        });
+
+        let json = serde_json::to_string(&ep).unwrap();
+        let parsed: Episode = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.session_id, Some("session-abc".to_string()));
+        assert_eq!(parsed.related_episodes.len(), 1);
+        assert_eq!(
+            parsed.related_episodes[0].relationship,
+            EpisodeRelation::Continuation
+        );
+    }
+
+    #[test]
+    fn test_session_in_markdown() {
+        let mut ep = Episode::new("test".to_string(), "prompt".to_string());
+        ep.session_id = Some("abcdef12-3456-7890".to_string());
+        ep.related_episodes.push(RelatedEpisode {
+            id: "related-123456789".to_string(),
+            relationship: EpisodeRelation::Prerequisite,
+        });
+
+        let md = ep.to_markdown();
+        assert!(md.contains("**Session**: abcdef12"));
+        assert!(md.contains("related- (prerequisite)"));
     }
 }

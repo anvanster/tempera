@@ -24,19 +24,41 @@ similarity_weight = 0.3
 utility_weight = 0.7
 # Minimum similarity threshold
 min_similarity = 0.5
+# MMR lambda: 0.0 = pure diversity, 1.0 = pure relevance
+mmr_lambda = 0.7
+# Recency weight in scoring (0.0 = off, opt-in). When enabled, weights are normalized.
+recency_weight = 0.0
+# Half-life for recency decay in days (episode scores 0.5 at this age)
+recency_halflife_days = 30.0
 
 [bellman]
-# Discount factor for Bellman updates
+# Discount factor for Bellman updates (gamma)
 gamma = 0.9
-# Learning rate for utility updates
+# Learning rate for utility updates (alpha)
 alpha = 0.1
 # How often to run propagation
 propagate_interval = "daily"
+# Decay rate per day for unused episodes (0.0 - 1.0)
+decay_rate = 0.01
+# Minimum similarity threshold for Bellman propagation
+propagation_threshold = 0.5
+# Maximum propagation depth (hops)
+max_propagation_depth = 2
+# Temporal credit lookback window in hours
+temporal_credit_window_hours = 1
 
 [storage]
 # Maximum age for episodes (days)
 max_age_days = 180
-# Minimum utility score to keep
+# Minimum utility score to keep during pruning
 min_utility_threshold = 0.05
-# Minimum retrievals to consider for pruning
+# Minimum retrievals before an episode can be pruned
 min_retrievals = 2
+# Similarity threshold for BKM consolidation during capture (0.85+ recommended)
+consolidation_threshold = 0.85
+# Similarity threshold for duplicate clustering during review
+cluster_threshold = 0.85
+# Episodes older than this (days) with low utility are considered stale
+stale_age_days = 30
+# Utility below this marks an episode as stale (when also old enough)
+stale_utility_threshold = 0.2

@@ -4,12 +4,7 @@
 use serde_json::Value;
 
 use crate::mcp::helpers::{extract_project, extract_string_array};
-use crate::{episode, indexer, store, utility};
-
-/// Similarity threshold for BKM consolidation.
-/// Above this, a new capture updates the existing episode instead of creating a new one.
-/// Must be high (0.85+) because project-scoped searches inflate similarity.
-const CONSOLIDATION_THRESHOLD: f32 = 0.85;
+use crate::{config, episode, indexer, store, utility};
 
 /// Capture a new episode, consolidating with existing BKMs when similar
 pub(crate) async fn handle(args: &Value) -> Result<String, String> {
@@ -71,6 +66,7 @@ pub(crate) async fn handle(args: &Value) -> Result<String, String> {
     }
 
     let store = store::EpisodeStore::new().map_err(|e| e.to_string())?;
+    let cfg = config::Config::load().unwrap_or_default();
 
     // Try to find a similar existing episode to consolidate with
     if let Some(result) = try_consolidate(
@@ -82,6 +78,7 @@ pub(crate) async fn handle(args: &Value) -> Result<String, String> {
         &tags,
         &files_modified,
         &errors,
+        cfg.storage.consolidation_threshold,
     )
     .await
     {
@@ -97,6 +94,10 @@ pub(crate) async fn handle(args: &Value) -> Result<String, String> {
     ep.intent.extracted_intent = summary.to_string();
     ep.context.errors_encountered = errors;
     ep.timestamp_end = chrono::Utc::now();
+
+    // Session chaining: use provided session_id or auto-detect from recent episodes
+    let explicit_session_id = args.get("session_id").and_then(|v| v.as_str());
+    ep.session_id = resolve_session_id(&store, explicit_session_id, &project);
 
     store.save(&ep).map_err(|e| e.to_string())?;
 
@@ -116,12 +117,19 @@ pub(crate) async fn handle(args: &Value) -> Result<String, String> {
         ep.intent.task_type,
         ep.outcome.status
     );
+    if let Some(sid) = &ep.session_id {
+        output.push_str(&format!("- Session: {}\n", &sid[..8]));
+    }
 
     // Auto-propagate utility to spread value
     output.push_str("\n📈 Running auto-propagation...\n");
-    let params = utility::UtilityParams::default();
+    let cfg = config::Config::load().unwrap_or_default();
+    let params = utility::UtilityParams::from_config(&cfg);
     match utility::run_bellman_propagation(&store, &params, Some(project.as_str())).await {
-        Ok((count, _)) => output.push_str(&format!("  Propagated value to {} episode(s)\n", count)),
+        Ok(r) => output.push_str(&format!(
+            "  Propagated value to {} episode(s)\n",
+            r.propagated
+        )),
         Err(e) => output.push_str(&format!("  (propagation skipped: {})\n", e)),
     }
 
@@ -141,6 +149,7 @@ async fn try_consolidate(
     tags: &[String],
     files_modified: &[String],
     errors: &[episode::ErrorRecord],
+    consolidation_threshold: f32,
 ) -> Option<String> {
     // Try vector search first
     let mut indexer = indexer::EpisodeIndexer::new().await.ok()?;
@@ -164,7 +173,7 @@ async fn try_consolidate(
     // Find the best match above threshold
     let best = results
         .into_iter()
-        .find(|r| r.similarity_score >= CONSOLIDATION_THRESHOLD)?;
+        .find(|r| r.similarity_score >= consolidation_threshold)?;
 
     // Load the existing episode
     let mut existing = store.load(&best.id).ok()?;
@@ -305,4 +314,37 @@ fn try_tag_consolidate(
     output
         .push_str("\nExisting episode refined with new insights instead of creating a duplicate.");
     Some(output)
+}
+
+/// Resolve the session_id for a new episode.
+/// If an explicit session_id is provided, use it.
+/// Otherwise, check if the most recent same-project episode was captured within 2 hours —
+/// if so, reuse its session_id (or generate one and backfill).
+fn resolve_session_id(
+    store: &store::EpisodeStore,
+    explicit: Option<&str>,
+    project: &str,
+) -> Option<String> {
+    if let Some(sid) = explicit {
+        return Some(sid.to_string());
+    }
+
+    let recent = store.latest_for_project(project).ok()??;
+    let age = chrono::Utc::now() - recent.timestamp_end;
+
+    if age > chrono::Duration::hours(2) {
+        return None; // Too old, start fresh
+    }
+
+    // Reuse existing session_id, or generate one and backfill the recent episode
+    if let Some(sid) = &recent.session_id {
+        Some(sid.clone())
+    } else {
+        let new_session = uuid::Uuid::new_v4().to_string();
+        // Backfill the recent episode with the new session_id
+        let mut updated = recent;
+        updated.session_id = Some(new_session.clone());
+        let _ = store.update(&updated);
+        Some(new_session)
+    }
 }

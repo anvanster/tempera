@@ -3,11 +3,30 @@
 
 use serde_json::Value;
 
-use crate::{episode, store};
+use crate::{episode, stats, store};
 
 /// Get memory statistics
 pub(crate) async fn handle(args: &Value) -> Result<String, String> {
     let project_filter = args.get("project").and_then(|v| v.as_str());
+    let action = args
+        .get("action")
+        .and_then(|v| v.as_str())
+        .unwrap_or("stats");
+
+    // Handle trends action
+    if action == "trends" {
+        let store = store::EpisodeStore::new().map_err(|e| e.to_string())?;
+        let mut episodes = store.list_all().map_err(|e| e.to_string())?;
+        if let Some(proj) = project_filter {
+            episodes.retain(|e| e.project.to_lowercase().contains(&proj.to_lowercase()));
+        }
+        let bucket = args
+            .get("bucket")
+            .and_then(|v| v.as_str())
+            .unwrap_or("weekly");
+        let analytics = stats::compute_trends(&episodes, bucket);
+        return Ok(stats::render_trends(&analytics));
+    }
 
     let store = store::EpisodeStore::new().map_err(|e| e.to_string())?;
     let episodes = store.list_all().map_err(|e| e.to_string())?;

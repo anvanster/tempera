@@ -7,12 +7,7 @@ use serde_json::Value;
 
 use crate::episode::Episode;
 use crate::mcp::helpers::{extract_project, load_project_episodes};
-use crate::{indexer, store};
-
-/// Similarity threshold for clustering episodes as duplicates.
-/// Must be high (0.85+) because project-scoped searches inflate similarity —
-/// all episodes within the same project share semantic context.
-const CLUSTER_THRESHOLD: f32 = 0.85;
+use crate::{config, indexer, store};
 
 /// Review and consolidate memories
 pub(crate) async fn handle(args: &Value) -> Result<String, String> {
@@ -22,6 +17,7 @@ pub(crate) async fn handle(args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_str())
         .unwrap_or("analyze");
 
+    let cfg = config::Config::load().map_err(|e| e.to_string())?;
     let store = store::EpisodeStore::new().map_err(|e| e.to_string())?;
     let project_episodes = load_project_episodes(&store, &project)?;
 
@@ -33,18 +29,21 @@ pub(crate) async fn handle(args: &Value) -> Result<String, String> {
     output.push_str(&"=".repeat(22 + project.len()));
     output.push_str("\n\n");
 
-    // Find stale memories (old with low utility)
+    // Find stale memories (old with low utility, thresholds from config)
+    let stale_age = cfg.storage.stale_age_days as i64;
+    let stale_util = cfg.storage.stale_utility_threshold;
     let stale: Vec<_> = project_episodes
         .iter()
         .filter(|e| {
             let age_days = (chrono::Utc::now() - e.timestamp_start).num_days();
             let utility = e.utility.calculate_score();
-            age_days > 30 && utility < 0.2
+            age_days > stale_age && utility < stale_util
         })
         .collect();
 
     // Find duplicate clusters using vector similarity (or Jaccard fallback)
-    let clusters = find_duplicate_clusters(&project_episodes, &project).await;
+    let clusters =
+        find_duplicate_clusters(&project_episodes, &project, cfg.storage.cluster_threshold).await;
 
     // Calculate feedback rate
     let total_retrievals: u32 = project_episodes
@@ -279,9 +278,13 @@ pub(crate) async fn handle(args: &Value) -> Result<String, String> {
 
 /// Find clusters of similar episodes using vector similarity, with Jaccard fallback.
 /// Returns groups of 2+ episodes that are semantically similar.
-async fn find_duplicate_clusters(episodes: &[Episode], project: &str) -> Vec<Vec<Episode>> {
+async fn find_duplicate_clusters(
+    episodes: &[Episode],
+    project: &str,
+    cluster_threshold: f32,
+) -> Vec<Vec<Episode>> {
     // Try vector-based clustering first
-    if let Some(clusters) = try_vector_clustering(episodes, project).await {
+    if let Some(clusters) = try_vector_clustering(episodes, project, cluster_threshold).await {
         return clusters;
     }
     // Fall back to Jaccard word similarity
@@ -289,7 +292,11 @@ async fn find_duplicate_clusters(episodes: &[Episode], project: &str) -> Vec<Vec
 }
 
 /// Vector-based duplicate detection using the embedding index
-async fn try_vector_clustering(episodes: &[Episode], project: &str) -> Option<Vec<Vec<Episode>>> {
+async fn try_vector_clustering(
+    episodes: &[Episode],
+    project: &str,
+    cluster_threshold: f32,
+) -> Option<Vec<Vec<Episode>>> {
     let indexer = indexer::EpisodeIndexer::new().await.ok()?;
 
     if !indexer.is_indexed().await {
@@ -313,7 +320,7 @@ async fn try_vector_clustering(episodes: &[Episode], project: &str) -> Option<Ve
             if result.id == ep.id {
                 continue; // Skip self
             }
-            if result.similarity_score >= CLUSTER_THRESHOLD && episode_map.contains_key(&result.id)
+            if result.similarity_score >= cluster_threshold && episode_map.contains_key(&result.id)
             {
                 // Normalize pair order to avoid duplicates
                 let (a, b) = if ep.id < result.id {

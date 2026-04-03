@@ -68,6 +68,15 @@ pub struct RetrievalConfig {
     pub utility_weight: f32,
     #[serde(default = "default_min_similarity")]
     pub min_similarity: f32,
+    /// MMR lambda: 0.0 = pure diversity, 1.0 = pure relevance
+    #[serde(default = "default_mmr_lambda")]
+    pub mmr_lambda: f32,
+    /// Weight for recency in scoring (0.0 = off, opt-in)
+    #[serde(default = "default_recency_weight")]
+    pub recency_weight: f32,
+    /// Half-life for recency decay in days
+    #[serde(default = "default_recency_halflife_days")]
+    pub recency_halflife_days: f32,
 }
 
 impl Default for RetrievalConfig {
@@ -77,6 +86,9 @@ impl Default for RetrievalConfig {
             similarity_weight: default_similarity_weight(),
             utility_weight: default_utility_weight(),
             min_similarity: default_min_similarity(),
+            mmr_lambda: default_mmr_lambda(),
+            recency_weight: default_recency_weight(),
+            recency_halflife_days: default_recency_halflife_days(),
         }
     }
 }
@@ -89,6 +101,18 @@ pub struct BellmanConfig {
     pub alpha: f32,
     #[serde(default = "default_propagate_interval")]
     pub propagate_interval: String,
+    /// Decay rate per day for unused episodes (0.0 - 1.0)
+    #[serde(default = "default_decay_rate")]
+    pub decay_rate: f64,
+    /// Minimum similarity threshold for Bellman propagation
+    #[serde(default = "default_propagation_threshold")]
+    pub propagation_threshold: f32,
+    /// Maximum propagation depth (hops)
+    #[serde(default = "default_max_propagation_depth")]
+    pub max_propagation_depth: u32,
+    /// Temporal credit lookback window in hours
+    #[serde(default = "default_temporal_credit_window_hours")]
+    pub temporal_credit_window_hours: i64,
 }
 
 impl Default for BellmanConfig {
@@ -97,6 +121,10 @@ impl Default for BellmanConfig {
             gamma: default_gamma(),
             alpha: default_alpha(),
             propagate_interval: default_propagate_interval(),
+            decay_rate: default_decay_rate(),
+            propagation_threshold: default_propagation_threshold(),
+            max_propagation_depth: default_max_propagation_depth(),
+            temporal_credit_window_hours: default_temporal_credit_window_hours(),
         }
     }
 }
@@ -109,6 +137,18 @@ pub struct StorageConfig {
     pub min_utility_threshold: f32,
     #[serde(default = "default_min_retrievals")]
     pub min_retrievals: u32,
+    /// Similarity threshold for BKM consolidation during capture
+    #[serde(default = "default_consolidation_threshold")]
+    pub consolidation_threshold: f32,
+    /// Similarity threshold for duplicate clustering during review
+    #[serde(default = "default_cluster_threshold")]
+    pub cluster_threshold: f32,
+    /// Episodes older than this (days) with low utility are considered stale
+    #[serde(default = "default_stale_age_days")]
+    pub stale_age_days: u32,
+    /// Utility below this marks an episode as stale (when also old enough)
+    #[serde(default = "default_stale_utility_threshold")]
+    pub stale_utility_threshold: f32,
 }
 
 impl Default for StorageConfig {
@@ -117,6 +157,10 @@ impl Default for StorageConfig {
             max_age_days: default_max_age_days(),
             min_utility_threshold: default_min_utility_threshold(),
             min_retrievals: default_min_retrievals(),
+            consolidation_threshold: default_consolidation_threshold(),
+            cluster_threshold: default_cluster_threshold(),
+            stale_age_days: default_stale_age_days(),
+            stale_utility_threshold: default_stale_utility_threshold(),
         }
     }
 }
@@ -172,6 +216,50 @@ fn default_min_utility_threshold() -> f32 {
 
 fn default_min_retrievals() -> u32 {
     2
+}
+
+fn default_mmr_lambda() -> f32 {
+    0.7
+}
+
+fn default_recency_weight() -> f32 {
+    0.0 // Off by default — opt-in
+}
+
+fn default_recency_halflife_days() -> f32 {
+    30.0
+}
+
+fn default_decay_rate() -> f64 {
+    0.01
+}
+
+fn default_propagation_threshold() -> f32 {
+    0.5
+}
+
+fn default_max_propagation_depth() -> u32 {
+    2
+}
+
+fn default_temporal_credit_window_hours() -> i64 {
+    1
+}
+
+fn default_consolidation_threshold() -> f32 {
+    0.85
+}
+
+fn default_cluster_threshold() -> f32 {
+    0.85
+}
+
+fn default_stale_age_days() -> u32 {
+    30
+}
+
+fn default_stale_utility_threshold() -> f32 {
+    0.2
 }
 
 impl Default for Config {
@@ -264,6 +352,19 @@ mod tests {
         assert!(config.capture.auto_capture);
         assert_eq!(config.retrieval.default_limit, 3);
         assert_eq!(config.bellman.gamma, 0.9);
+        // New fields have correct defaults
+        assert_eq!(config.retrieval.mmr_lambda, 0.7);
+        assert!((config.bellman.decay_rate - 0.01).abs() < f64::EPSILON);
+        assert_eq!(config.bellman.propagation_threshold, 0.5);
+        assert_eq!(config.bellman.max_propagation_depth, 2);
+        assert_eq!(config.bellman.temporal_credit_window_hours, 1);
+        assert_eq!(config.storage.consolidation_threshold, 0.85);
+        assert_eq!(config.storage.cluster_threshold, 0.85);
+        assert_eq!(config.storage.stale_age_days, 30);
+        assert_eq!(config.storage.stale_utility_threshold, 0.2);
+        // Recency defaults
+        assert_eq!(config.retrieval.recency_weight, 0.0);
+        assert_eq!(config.retrieval.recency_halflife_days, 30.0);
     }
 
     #[test]
@@ -275,5 +376,37 @@ mod tests {
             config.retrieval.default_limit,
             parsed.retrieval.default_limit
         );
+        assert_eq!(config.retrieval.mmr_lambda, parsed.retrieval.mmr_lambda);
+        assert!((config.bellman.decay_rate - parsed.bellman.decay_rate).abs() < f64::EPSILON);
+        assert_eq!(
+            config.storage.consolidation_threshold,
+            parsed.storage.consolidation_threshold
+        );
+    }
+
+    #[test]
+    fn test_config_backward_compat() {
+        // Old config without new fields should deserialize with defaults
+        let old_toml = r#"
+[capture]
+auto_capture = true
+
+[retrieval]
+default_limit = 5
+
+[bellman]
+gamma = 0.8
+
+[storage]
+max_age_days = 90
+"#;
+        let config: Config = toml::from_str(old_toml).unwrap();
+        assert_eq!(config.retrieval.default_limit, 5);
+        assert_eq!(config.bellman.gamma, 0.8);
+        // New fields get defaults
+        assert_eq!(config.retrieval.mmr_lambda, 0.7);
+        assert!((config.bellman.decay_rate - 0.01).abs() < f64::EPSILON);
+        assert_eq!(config.storage.consolidation_threshold, 0.85);
+        assert_eq!(config.storage.stale_age_days, 30);
     }
 }

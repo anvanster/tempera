@@ -229,6 +229,37 @@ impl EpisodeStore {
         anyhow::bail!("Episode not found: {}", id)
     }
 
+    /// List all episodes belonging to a session
+    pub fn list_by_session(&self, session_id: &str) -> Result<Vec<Episode>> {
+        let all = self.list_all()?;
+        Ok(all
+            .into_iter()
+            .filter(|ep| ep.session_id.as_deref() == Some(session_id))
+            .collect())
+    }
+
+    /// Load all episodes related to a given episode (via related_episodes links)
+    pub fn list_related(&self, episode_id: &str) -> Result<Vec<Episode>> {
+        let source = self.load(episode_id)?;
+        let mut related = Vec::new();
+        for rel in &source.related_episodes {
+            if let Ok(ep) = self.load(&rel.id) {
+                related.push(ep);
+            }
+        }
+        Ok(related)
+    }
+
+    /// Find the most recent episode for a project
+    pub fn latest_for_project(&self, project: &str) -> Result<Option<Episode>> {
+        let all = self.list_all()?;
+        let project_lower = project.to_lowercase();
+        Ok(all
+            .into_iter()
+            .filter(|ep| ep.project.to_lowercase().contains(&project_lower))
+            .max_by_key(|ep| ep.timestamp_end))
+    }
+
     /// Get statistics about stored episodes
     pub fn get_stats(&self, project_filter: Option<&str>) -> Result<EpisodeStats> {
         let episodes = self.list_all()?;
@@ -360,5 +391,44 @@ mod tests {
 
         let all = store.list_all().unwrap();
         assert_eq!(all.len(), 2);
+    }
+
+    #[test]
+    fn test_list_by_session() {
+        let (store, _temp) = create_test_store();
+
+        let session_id = "test-session-123".to_string();
+
+        let mut ep1 = Episode::new("proj".to_string(), "step 1".to_string());
+        ep1.session_id = Some(session_id.clone());
+        let mut ep2 = Episode::new("proj".to_string(), "step 2".to_string());
+        ep2.session_id = Some(session_id.clone());
+        let ep3 = Episode::new("proj".to_string(), "unrelated".to_string());
+
+        store.save(&ep1).unwrap();
+        store.save(&ep2).unwrap();
+        store.save(&ep3).unwrap();
+
+        let session_eps = store.list_by_session(&session_id).unwrap();
+        assert_eq!(session_eps.len(), 2);
+
+        // ep3 has no session
+        let no_session = store.list_by_session("nonexistent").unwrap();
+        assert!(no_session.is_empty());
+    }
+
+    #[test]
+    fn test_latest_for_project() {
+        let (store, _temp) = create_test_store();
+
+        let ep1 = Episode::new("myproj".to_string(), "first".to_string());
+        store.save(&ep1).unwrap();
+
+        let latest = store.latest_for_project("myproj").unwrap();
+        assert!(latest.is_some());
+        assert_eq!(latest.unwrap().id, ep1.id);
+
+        let none = store.latest_for_project("nonexistent").unwrap();
+        assert!(none.is_none());
     }
 }

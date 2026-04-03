@@ -3,7 +3,7 @@
 
 use serde_json::Value;
 
-use crate::{indexer, store, utility};
+use crate::{config, indexer, store, utility};
 
 /// Run utility propagation
 pub(crate) async fn handle(args: &Value) -> Result<String, String> {
@@ -14,8 +14,9 @@ pub(crate) async fn handle(args: &Value) -> Result<String, String> {
 
     let project_filter = args.get("project").and_then(|v| v.as_str());
 
+    let config = config::Config::load().map_err(|e| e.to_string())?;
     let store = store::EpisodeStore::new().map_err(|e| e.to_string())?;
-    let params = utility::UtilityParams::default();
+    let params = utility::UtilityParams::from_config(&config);
 
     let mut output = String::from("📈 Running utility propagation...\n\n");
 
@@ -52,26 +53,33 @@ pub(crate) async fn handle(args: &Value) -> Result<String, String> {
     ));
 
     // Run Bellman propagation using vector similarity
-    let (propagated_count, propagation_delta) =
-        utility::run_bellman_propagation(&store, &params, project_filter)
-            .await
-            .unwrap_or((0, 0.0));
+    let bellman = utility::run_bellman_propagation(&store, &params, project_filter)
+        .await
+        .unwrap_or(utility::BellmanResult {
+            propagated: 0,
+            total_change: 0.0,
+            hops_executed: 0,
+            converged: true,
+        });
 
     output.push_str(&format!(
-        "  🔄 Propagated value to {} episodes\n",
-        propagated_count
+        "  🔄 Propagated value to {} episodes ({} hop(s){})\n",
+        bellman.propagated,
+        bellman.hops_executed,
+        if bellman.converged { ", converged" } else { "" }
     ));
     output.push_str(&format!(
         "  📊 Total utility change: {:+.3}\n",
-        propagation_delta
+        bellman.total_change
     ));
 
     // Temporal credit assignment
     if temporal {
         output.push_str("\n⏱️  Running temporal credit assignment...\n");
 
-        let credited = utility::temporal_credit_assignment(&store, project_filter, &params)
-            .map_err(|e| e.to_string())?;
+        let credited =
+            utility::temporal_credit_assignment(&store, project_filter, &params, &config)
+                .map_err(|e| e.to_string())?;
 
         output.push_str(&format!("  ✅ Credited {} episodes\n", credited));
     }

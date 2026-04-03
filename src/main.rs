@@ -148,6 +148,17 @@ enum Commands {
         execute: bool,
     },
 
+    /// Show trend analytics (helpfulness over time, domain growth, learning curve)
+    Trends {
+        /// Filter by project
+        #[arg(long)]
+        project: Option<String>,
+
+        /// Bucket size: "weekly" or "monthly"
+        #[arg(long, default_value = "weekly")]
+        bucket: String,
+    },
+
     /// Initialize tempera in current project
     Init,
 }
@@ -205,7 +216,7 @@ async fn main() -> Result<()> {
         }
 
         Commands::Propagate { temporal, project } => {
-            run_propagate(temporal, project).await?;
+            run_propagate(temporal, project, &config).await?;
         }
 
         Commands::Prune {
@@ -213,7 +224,11 @@ async fn main() -> Result<()> {
             min_utility,
             execute,
         } => {
-            run_prune(older_than, min_utility, execute)?;
+            run_prune(older_than, min_utility, execute, &config)?;
+        }
+
+        Commands::Trends { project, bucket } => {
+            stats::trends(project, &bucket, &config).await?;
         }
 
         Commands::Init => {
@@ -246,16 +261,25 @@ async fn run_index(reindex: bool) -> Result<()> {
     Ok(())
 }
 
-async fn run_propagate(temporal: bool, project: Option<String>) -> Result<()> {
+async fn run_propagate(
+    temporal: bool,
+    project: Option<String>,
+    config: &config::Config,
+) -> Result<()> {
     println!("📈 Running utility propagation...\n");
 
     // Run the main propagation pipeline
-    let result = utility::run_propagation().await?;
+    let result = utility::run_propagation(config).await?;
 
     println!("\n📊 Propagation Results:");
     println!("   Episodes processed: {}", result.episodes_processed);
     println!("   Decayed: {}", result.decayed_episodes);
     println!("   Propagated: {}", result.propagated_episodes);
+    println!(
+        "   Hops: {}{}",
+        result.hops_executed,
+        if result.converged { " (converged)" } else { "" }
+    );
     println!(
         "   Total utility change: {:+.3}",
         result.total_utility_change
@@ -265,8 +289,9 @@ async fn run_propagate(temporal: bool, project: Option<String>) -> Result<()> {
     if temporal {
         println!("\n⏱️  Running temporal credit assignment...");
         let store = store::EpisodeStore::new()?;
-        let params = utility::UtilityParams::default();
-        let updated = utility::temporal_credit_assignment(&store, project.as_deref(), &params)?;
+        let params = utility::UtilityParams::from_config(config);
+        let updated =
+            utility::temporal_credit_assignment(&store, project.as_deref(), &params, config)?;
         println!("   Episodes credited: {}", updated);
     }
 
@@ -274,7 +299,12 @@ async fn run_propagate(temporal: bool, project: Option<String>) -> Result<()> {
     Ok(())
 }
 
-fn run_prune(older_than: Option<u32>, min_utility: Option<f32>, execute: bool) -> Result<()> {
+fn run_prune(
+    older_than: Option<u32>,
+    min_utility: Option<f32>,
+    execute: bool,
+    config: &config::Config,
+) -> Result<()> {
     println!("🗑️  Analyzing episodes for pruning...\n");
 
     if !execute {
@@ -283,7 +313,7 @@ fn run_prune(older_than: Option<u32>, min_utility: Option<f32>, execute: bool) -
     }
 
     let store = store::EpisodeStore::new()?;
-    let result = utility::prune_episodes(&store, older_than, min_utility, !execute)?;
+    let result = utility::prune_episodes(&store, older_than, min_utility, !execute, config)?;
 
     if result.candidates.is_empty() {
         println!("No episodes match pruning criteria.");

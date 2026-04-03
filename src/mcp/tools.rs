@@ -80,6 +80,10 @@ pub(crate) fn tool_definitions() -> Vec<Tool> {
                             }
                         },
                         "description": "Errors encountered and the STRATEGY used to resolve them — focus on the approach, not the specific code change"
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "description": "Link this episode to a session. Auto-detected if omitted: reuses session from recent same-project episodes (within 2 hours)."
                     }
                 },
                 "required": ["summary", "task_type", "outcome"]
@@ -106,13 +110,25 @@ pub(crate) fn tool_definitions() -> Vec<Tool> {
         },
         Tool {
             name: "tempera_stats".to_string(),
-            description: "Get statistics about the episodic memory system.".to_string(),
+            description: "Get statistics or trend analytics about the episodic memory system. Use action 'trends' to see helpfulness over time, domain growth, and learning curve.".to_string(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
                     "project": {
                         "type": "string",
                         "description": "Filter stats by project (optional)"
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["stats", "trends"],
+                        "description": "stats: basic counts and rates. trends: time-series analytics, domain growth, learning curve.",
+                        "default": "stats"
+                    },
+                    "bucket": {
+                        "type": "string",
+                        "enum": ["weekly", "monthly"],
+                        "description": "Bucket size for trends (default: weekly)",
+                        "default": "weekly"
                     }
                 }
             }),

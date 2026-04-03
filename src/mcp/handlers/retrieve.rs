@@ -110,6 +110,34 @@ pub(crate) async fn handle(args: &Value) -> Result<String, String> {
         output.push('\n');
     }
 
+    // Surface session context: if any retrieved episode has a session, mention related episodes
+    let mut session_context_shown = std::collections::HashSet::new();
+    for scored in &episodes {
+        if let Some(sid) = &scored.episode.session_id {
+            if session_context_shown.insert(sid.clone()) {
+                if let Ok(session_eps) = store.list_by_session(sid) {
+                    let others: Vec<_> = session_eps
+                        .iter()
+                        .filter(|e| e.id != scored.episode.id)
+                        .collect();
+                    if !others.is_empty() {
+                        output.push_str(&format!(
+                            "📎 Session {} has {} related episode(s):\n",
+                            &sid[..8],
+                            others.len()
+                        ));
+                        for other in others.iter().take(3) {
+                            let summary: String =
+                                other.intent.extracted_intent.chars().take(50).collect();
+                            output.push_str(&format!("   - {} ({}...)\n", &other.id[..8], summary));
+                        }
+                        output.push('\n');
+                    }
+                }
+            }
+        }
+    }
+
     output.push_str("Use tempera_feedback to indicate if these were helpful.");
 
     // Record retrieval for tracking
@@ -206,9 +234,13 @@ fn show_episode_by_id(store: &store::EpisodeStore, id: &str) -> Result<Option<St
         ep.timestamp_end.format("%H:%M")
     ));
     output.push_str(&format!(
-        "**Utility**: {:.0}%\n\n",
+        "**Utility**: {:.0}%\n",
         ep.utility.calculate_score() * 100.0
     ));
+    if let Some(sid) = &ep.session_id {
+        output.push_str(&format!("**Session**: {}\n", &sid[..8]));
+    }
+    output.push('\n');
 
     output.push_str("## Intent\n");
     if !ep.intent.extracted_intent.is_empty() {
