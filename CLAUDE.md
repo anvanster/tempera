@@ -24,4 +24,4 @@ Error handling: `anyhow::Result` throughout, `thiserror` for typed errors.
 This project IS the tempera MCP server. When rebuilding the binary, do NOT call tempera MCP tools simultaneously — the binary may be locked or replaced mid-execution. Use smelt and stellarion MCP tools instead while working on this project.
 
 ## Version
-Version is in `Cargo.toml` (currently `0.2.0`). Tagging `v*` triggers GitHub Actions release for 5 platforms + npm publish.
+Version is in `Cargo.toml` (currently `0.4.0`). Tagging `v*` triggers GitHub Actions release for 5 platforms + npm publish.
