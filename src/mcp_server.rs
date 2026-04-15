@@ -63,10 +63,14 @@ async fn main() -> Result<()> {
             }
         };
 
+        // JSON-RPC notifications have no `id` — must not send a response
+        let is_notification = request.id.is_none();
         let response = server.handle_request(request).await;
 
-        writeln!(stdout, "{}", serde_json::to_string(&response)?)?;
-        stdout.flush()?;
+        if !is_notification {
+            writeln!(stdout, "{}", serde_json::to_string(&response)?)?;
+            stdout.flush()?;
+        }
     }
 
     Ok(())

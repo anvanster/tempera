@@ -25,7 +25,10 @@ impl McpServer {
 
         let result = match request.method.as_str() {
             "initialize" => self.handle_initialize(),
-            "initialized" => Ok(json!({})),
+            "initialized"
+            | "notifications/initialized"
+            | "notifications/cancelled"
+            | "notifications/roots/list_changed" => Ok(json!({})),
             "tools/list" => Ok(json!({ "tools": tools::tool_definitions() })),
             "tools/call" => self.handle_tools_call(&request.params).await,
             "shutdown" => {
